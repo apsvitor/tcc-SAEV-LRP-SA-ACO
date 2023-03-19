@@ -1,7 +1,5 @@
 #include "vehicle.h"
-#include <cmath>
 #include <random>
-#include <queue>
 #include <iostream>
 
 
@@ -21,9 +19,7 @@ Vehicle::Vehicle(Point starting_location, int vehicle_id) {
     this->temp_time_spent   = 0;
 }
 
-void Vehicle::recharge_battery(double percentage) {
-    this->current_battery = this->max_battery*percentage;
-}
+void Vehicle::recharge_battery(double percentage) {this->current_battery = this->max_battery*percentage;}
 
 int Vehicle::get_vehicle_id(){return this->vehicle_id;}
 
@@ -75,7 +71,7 @@ bool Vehicle:: is_energy_feasible_with_recharge(Request request, Station recharg
     Point origin_aux    = request.get_origin();
     
     double recharge_dist= this->current_point.get_distance(station_aux);
-    double total_energy    = this->_calculate_energy_of_trip(recharge_dist);
+    double total_energy = this->_calculate_energy_of_trip(recharge_dist);
     std::cout << "Energy to station: " << total_energy << "| Energy left: " << this->current_battery << std::endl;
     // check if this vehicle can reach the station
     if  (total_energy > this->current_battery)
@@ -94,12 +90,12 @@ bool Vehicle:: is_energy_feasible_with_recharge(Request request, Station recharg
 
 double Vehicle::_calculate_time_of_trip(double distance) {
     // returns time in minutes (rounded up) 
-    return std::ceil(distance/this->mean_velocity);
+    return distance/this->mean_velocity;
 }
 
 double Vehicle::_calculate_time_of_recharge() {
     // returns time in minutes (rounded up)
-    return std::ceil((this->max_battery - this->current_battery) / this->charging_rate);
+    return (this->max_battery - this->current_battery) / this->charging_rate;
 }
 
 double Vehicle::_calculate_energy_of_trip(double distance) {
@@ -124,6 +120,8 @@ void Vehicle::update_state_of_recharged_vehicle(
     bool energy_feasibility,
     Request new_request) {
     if  (time_feasibility && energy_feasibility) {
+        Request trip_to_station = Request(this->current_point, new_request.get_origin(), 0, 99);
+        this->request_list.push_back(trip_to_station);
         this->current_battery   = this->max_battery - this->temp_energy_spent;
         this->time_of_vehicle   += this->temp_time_spent;
         this->current_point     = new_request.get_destination();
