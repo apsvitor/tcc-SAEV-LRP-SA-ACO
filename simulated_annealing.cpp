@@ -31,6 +31,11 @@ SimulatedAnnealing::SimulatedAnnealing(
 
     // auxiliary attributes
     this->current_candidate = new Candidate(all_requests, all_stations);
+
+    /*
+    TODO: SA não gerará um candidato inicial. O ACO se encarregará disso.
+    Provavelmente o current_candidate receberá um parâmetro no construtor.
+    */
     this->current_candidate->generate_candidate();
     this->current_iteration = 0;
     this->current_cost      = _total_cost(this->current_candidate);
