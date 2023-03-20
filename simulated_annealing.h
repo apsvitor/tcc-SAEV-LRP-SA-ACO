@@ -4,11 +4,6 @@
 #include <iostream>
 
 
-//     double      _fitness(Candidate* candidate);
-//     
-
-
-
 class SimulatedAnnealing {
 private:
     // parameters and input data
