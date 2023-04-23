@@ -1,3 +1,4 @@
+/*
 #include "simulated_annealing.h"
 #include <random>
 
@@ -6,40 +7,22 @@
 // ----------------------------------------------------------------
 SimulatedAnnealing::SimulatedAnnealing(
     std::vector<Station> all_stations,
-    std::queue<Request> all_requests,
-    double initial_T, 
-    double cooling_factor, 
-    double neighbour_reduction_factor, 
-    double min_T, 
-    int max_iterations, 
-    int max_neighbour_iterations) {
+    std::queue<Request> all_requests
+    ) {
     
-    // SA hyper parameters
     this->all_stations = all_stations;
     this->all_requests = all_requests;
-    this->initial_T = initial_T;
-    this->cooling_factor = cooling_factor;
-    this->neighbour_reduction_factor = neighbour_reduction_factor;
-    this->min_T = min_T;
-    this->max_iterations = max_iterations;
-    this->max_neighbour_iterations = max_neighbour_iterations;
-
-    // problem parameters
-    this->cost_per_vehicle  = 137.0;
-    this->cost_per_station  = 2328.76;
-    this->cost_per_trip     = 19.37;
 
     // auxiliary attributes
-    this->current_candidate = new Candidate(all_requests, all_stations);
-
-    /*
     TODO: SA não gerará um candidato inicial. O ACO se encarregará disso.
     Provavelmente o current_candidate receberá um parâmetro no construtor.
-    */
+    this->current_candidate = new Candidate(all_requests, all_stations);
     this->current_candidate->generate_candidate();
+    //===========OFF
+    //this->current_candidate = new_ant;
     this->current_iteration = 0;
     this->current_cost      = _total_cost(this->current_candidate);
-    this->current_T         = initial_T;
+    this->current_T         = sa_c::INITIAL_T;
 
 
     this->best_candidate    = current_candidate;
@@ -54,17 +37,17 @@ double SimulatedAnnealing::_total_cost(Candidate* cand) {
     std::vector<Vehicle> vehicles_used = cand->get_all_vehicles();
     // total vehicle cost
     int num_of_vehicles = vehicles_used.size();
-    total_cost += num_of_vehicles*this->cost_per_vehicle;
+    total_cost += vehicle_c::COST_PER_VEHICLE * num_of_vehicles;
     // total trip cost
     for (Vehicle v: vehicles_used) {
         int num_of_trips = v.get_request_list().size();
-        total_cost += this->cost_per_trip*num_of_trips;
+        total_cost += request_c::COST_PER_TRIP * num_of_trips;
     }
     // total station cost
     std::vector<Station> stations_used = this->current_candidate->get_all_stations();
     for (Station s: stations_used) {
         if  (s.get_is_used())
-            total_cost += this->cost_per_station;
+            total_cost += station_c::COST_PER_STATION;
     }
     // saving total cost for the candidate
     cand->set_candidate_cost(total_cost);
@@ -95,6 +78,8 @@ Candidate SimulatedAnnealing::_disturb_candidate(Candidate* cand) {
         //     std::cout << "Replace attempt failed. Infeasible solution\n";
     }
     // else {
+
+    // TODO: FIX THIS METHOD
     //     // criar novo veiculo e roubar uma request de um aleatorio
     //     std::cout << "Steal called\n";
     //     bool is_stolen = cand->steal_request();
@@ -113,10 +98,11 @@ Candidate SimulatedAnnealing::_disturb_candidate(Candidate* cand) {
 
 void SimulatedAnnealing::run() {
     // Run until one or more conditions are no longer true
+    int neighbors_search_space = sa_c::MAX_NEIGHBORS_ITERATIONS;
     while(
-        this->current_iteration < this->max_iterations &&
-        this->current_T > this->min_T &&
-        this->max_neighbour_iterations > 0) {
+        this->current_iteration < sa_c::MAX_ITERATIONS &&
+        this->current_T > sa_c::MIN_T &&
+        neighbors_search_space > 0) {
         std::cout << "----------> ITERATION " << this->current_iteration << " Current BEST: " << this->best_cost << std::endl;
         // Candidate  best_neighbor_candidate = *(this->best_candidate);
         // double      best_neighbor_cost = this->best_cost;
@@ -126,7 +112,7 @@ void SimulatedAnnealing::run() {
         std::uniform_real_distribution<double> f_distr(0,1);
 
         // For each temperature level, explore the neighbors
-        for (int i=0; i<this->max_neighbour_iterations; i++) {
+        for (int i=0; i<neighbors_search_space; i++) {
             // find a new neighbor
             Candidate* neighbor_sol = new Candidate(this->_disturb_candidate(this->current_candidate));
             double neighbor_cost = neighbor_sol->get_candidate_cost();
@@ -146,8 +132,8 @@ void SimulatedAnnealing::run() {
 
         // alter the state
         this->current_iteration += 1;
-        this->current_T *= this->cooling_factor;
-        this->max_neighbour_iterations *= (1-this->neighbour_reduction_factor);
+        this->current_T *= sa_c::COOLING_FACTOR;
+        neighbors_search_space *= (1-sa_c::NEIGHBOR_REDUCTION_FACTOR);
     }
     // output the best solution
     print_solution();
@@ -159,8 +145,8 @@ void SimulatedAnnealing::print_solution() {
 
     std::cout << "\nStopped Simulation:"
               << "\nCurrent Iteration: " << this->current_iteration
-              << "\nCurrent Temperature: " << this->current_T
-              << "\nCurrent Neighbors searched: " << this->max_neighbour_iterations << std::endl;
+              << "\nCurrent Temperature: " << this->current_T << '\n';
+            //   << "\nCurrent Neighbors searched: " << this->max_neighbour_iterations << std::endl;
 
     std::cout << "Best Solution Found:\n"
               << "Cost: " << this->best_cost << std::endl
@@ -188,3 +174,5 @@ void SimulatedAnnealing::print_solution() {
         }
     }
 }
+
+*/

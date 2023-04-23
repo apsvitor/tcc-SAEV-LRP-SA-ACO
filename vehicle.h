@@ -4,24 +4,47 @@
 #include <queue>
 #include "request.h"
 #include "station.h"
+#include "vertex.h"
+#include "constants.h"
 
+class Vehicle {
+public:
+    int                     vehicle_id;    
+    std::vector<Vertex>     vehicle_path;
+    Vertex                  *current_vertex;
+    double                  current_battery;
+    double                  time_of_vehicle;
+
+    Vehicle(Vertex *starting_point, int vehicle_id);
+    
+    void                    add_vertex_to_vehicle_path(Vertex new_edge);
+    
+    double                  __calculate_time_of_recharge();
+    int                     __calculate_time_of_trip(Vertex *next_v);
+    double                  __calculate_energy_of_trip(Vertex *next_v);
+    double                  __calculate_distance_of_trip(Vertex *next_v);
+    
+    bool                    is_time_feasible(Vertex *next_v);
+    bool                    is_energy_feasible(Vertex *next_v);
+    void                    update_vehicle_state(Vertex *next_v);
+    void                    update_vehicle_recharge(Vertex *next_v);
+    void                    update_vehicle_request(Vertex *next_v);
+};
+
+/*
 class Vehicle {
 private:
     // temporary variables due to poor design
     double                  temp_time_spent;
     double                  temp_energy_spent;
-    // Vehicle FIXED characteristics
+    // Vehicle characteristics
     int                     vehicle_id;
-    double                  max_battery;        // KWh
-    double                  consumption_rate;   // KWh per km
-    double                  mean_velocity;      // km per min
-    double                  charging_rate;      // Kwh per min
-    double                  min_battery_level;  // percentage of charge
-
     Point                   current_point;
     double                  current_battery;
-    double                     time_of_vehicle;
+    double                  time_of_vehicle;
     std::vector<Request>    request_list;
+
+    std::vector<Vertex>     vehicle_path;
     
 
     double                  _calculate_time_of_trip(double distance);
@@ -56,3 +79,4 @@ public:
     std::vector<Request> get_request_list();
 
 };
+*/
