@@ -29,7 +29,8 @@ Vertex* Candidate::__find_a_station_to_stop(Vehicle *&car_pointer) {
     }
     // It is assumed that the input will be "friendly enough" to never 
     // reach this part. It must be possible for a vehicle to answer
-    // requests and get back to any station given a minimum charge.  
+    // requests and get back to any station given a minimum charge.
+    return nullptr;
 }
 
 Vehicle* Candidate::__generate_new_vehicle(int &v_index) {
@@ -38,7 +39,7 @@ Vehicle* Candidate::__generate_new_vehicle(int &v_index) {
     static_cast<Station*>(starting_point)->is_used = true;
     Vehicle* car_pointer = new Vehicle(starting_point, v_index++);
     car_pointer->add_vertex_to_vehicle_path(*starting_point);
-    
+
     std::cout << "Vehicle acquired: v_id=" << v_index 
               << "\tLeaving Station s_id=" << station_index << '\n';
     
@@ -73,21 +74,42 @@ Vertex* Candidate::__choose_next_edge(
     for (auto ph_ind: cumulative_sum)
         if  (random_probability <= ph_ind.first)
             return current_v->adj_list[ph_ind.second];
+
+    return nullptr;
 }
 
 void Candidate::__answer_request(Vertex* request) {
     // remove every reference to the request's vertex once it is done
-    int remove_index = request->vertex_id;
-    
+    int remove_id = request->vertex_id;
+    int v_index = 0;
+    // remove the request from the vertices_list
     for (auto vertex: this->vertices_list) {
-        int index=0;
-        for (auto neighbor: vertex->adj_list) {
-            if  (neighbor->vertex_id == remove_index){
-                vertex->adj_list.erase(vertex->adj_list.begin() + index);
-                return;
+        if  (vertex->vertex_type == 'r' && vertex->vertex_id == remove_id){
+            this->vertices_list.erase(this->vertices_list.begin() + v_index);
+            // find the position of v_index in the r_ind vector and erase it
+            int v_index_finder = 0;
+            for (auto ind: this->r_ind) {
+                if  (ind == v_index) {
+                    this->r_ind.erase(this->r_ind.begin() + v_index_finder);
+                    break;
+                }
+                v_index_finder++;
             }
-            index++;
+            break;
         }
+        else {
+            // remove the edges from all vertices that connect to the request R
+            // search through the adj_list of each vertex to find the edge
+            int v_index_finder = 0;
+            for (auto neighbor: vertex->adj_list) {
+                if  (neighbor->vertex_type == 'r' && neighbor->vertex_id == remove_id) {
+                    vertex->adj_list.erase(vertex->adj_list.begin() + v_index_finder);
+                    break;
+                }
+                v_index_finder++;
+            }
+        }
+        v_index++;
     }
 }
 
@@ -140,8 +162,7 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix, Vehicle 
 void Candidate::generate_candidate(std::map < pkey, float> &pheromone_matrix) {
     int v_index=-1;
     Vehicle *car_pointer;
-    int remaining_requests = this->num_requests; 
-    while(remaining_requests) {
+    while(this->r_ind.size()) {
         // acquire a vehicle
         car_pointer = __generate_new_vehicle(v_index);
 
