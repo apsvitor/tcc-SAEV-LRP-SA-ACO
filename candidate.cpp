@@ -38,7 +38,7 @@ Vertex* Candidate::__find_a_station_to_stop(Vehicle *car_pointer) {
 Vehicle* Candidate::__generate_new_vehicle(int v_index) {
     int station_index = __station_randomizer();
     Vertex *starting_point = this->vertices_list[station_index];
-    static_cast<Station*>(starting_point)->is_used = true;
+    static_cast<Station*>(starting_point)->is_used += 1;
     Vehicle* car_pointer = new Vehicle(starting_point, v_index);
     car_pointer->add_vertex_to_vehicle_path(*starting_point);
 
@@ -85,16 +85,16 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     // make a move
     
     Vertex* next_v = __choose_next_edge(pheromone_matrix, current_v);
-    std::cout << "Current: " << current_v->vertex_type << '_' << current_v->vertex_id 
-              << " | Chosen: " << next_v->vertex_type << '_' << next_v->vertex_id << std::endl;
+    // std::cout << "Current: " << current_v->vertex_type << '_' << current_v->vertex_id 
+    //           << " | Chosen: " << next_v->vertex_type << '_' << next_v->vertex_id << std::endl;
     // is it possible?
     bool is_on_time = car_pointer->is_time_feasible(next_v);
     bool has_energy = car_pointer->is_energy_feasible(next_v);
 
     if  (is_on_time && has_energy) {
-        std::cout << "Movement succesfully done!" << std::endl;
+        // std::cout << "Movement succesfully done!" << std::endl;
         if  (next_v->vertex_type == 's') {
-            static_cast<Station*>(car_pointer->current_vertex)->is_used = true;
+            static_cast<Station*>(next_v)->is_used += 1;
             car_pointer->update_vehicle_recharge(next_v);
         }
         else { // is a request
@@ -106,16 +106,17 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
         car_pointer->add_vertex_to_vehicle_path(*next_v);
         if  (this->num_requests)
             __path_builder(pheromone_matrix, car_pointer);
-        else {
-            std::cout << "No more requests to do. Path-finding to a station." << std::endl;
+        else if (car_pointer->current_vertex->vertex_type == 'r') {
+            // std::cout << "No more requests to do. Path-finding to a station." << std::endl;
             Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
             car_pointer->add_vertex_to_vehicle_path(*final_vertex);
             car_pointer->current_vertex = final_vertex;
+            static_cast<Station*>(car_pointer->current_vertex)->is_used += 1;
         }    
     }
     // if the vehicle cant complete the next_v task there are 2 scenarios:
     else if (car_pointer->current_vertex->vertex_type == 's') {
-        std::cout << "Already at a station. Ceases all activity." << std::endl;
+        // std::cout << "Already at a station. Ceases all activity." << std::endl;
         // In this case the vehicle is considered to have exhausted its uses.
         // Just return the path that was already built.
         // DUVIDA: devo realmente parar ou abasteço o veículo e retomo a recursão?
@@ -126,11 +127,12 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
         // DUVIDA: devo realmente parar ou faço o backtracking até que a busca por
         //         solução seja finalizada em uma estação (condição acima)?
         Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
-        std::cout << "At request r_" << car_pointer->current_vertex->vertex_id << ", tried to go to "
-                  << next_v->vertex_type << '_' << next_v->vertex_id << " but couldn't. So it will go to s_"
-                  << final_vertex->vertex_id << " instead." << std::endl;
+        // std::cout << "At request r_" << car_pointer->current_vertex->vertex_id << ", tried to go to "
+        //           << next_v->vertex_type << '_' << next_v->vertex_id << " but couldn't. So it will go to s_"
+        //           << final_vertex->vertex_id << " instead." << std::endl;
         car_pointer->add_vertex_to_vehicle_path(*final_vertex);
         car_pointer->current_vertex = final_vertex;
+        static_cast<Station*>(car_pointer->current_vertex)->is_used += 1;
     }
 
     return;
@@ -144,13 +146,13 @@ void Candidate::generate_candidate(std::map < pkey, float> &pheromone_matrix) {
         if  (v->vertex_type == 'r')
             static_cast<Request*>(v)->is_done = false;
         else
-            static_cast<Station*>(v)->is_used = false;
+            static_cast<Station*>(v)->is_used = 0;
     }
     while(this->num_requests > 0) {
-        std::cout << "Remaining Requests: " << this->num_requests << std::endl; 
+        // std::cout << "Remaining Requests: " << this->num_requests << std::endl; 
         // acquire a vehicle
         car_pointer = __generate_new_vehicle(v_index++);
-        std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << std::endl;
+        // std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << std::endl;
         // build the path for the vehicle
         __path_builder(pheromone_matrix, car_pointer);
         // add vehicle to the solution
@@ -158,8 +160,41 @@ void Candidate::generate_candidate(std::map < pkey, float> &pheromone_matrix) {
     }
 
     // calculate the cost function for the candidate
+    this->candidate_cost = __calculate_candidate_cost();
+}
+
+double Candidate::__calculate_candidate_cost() {
+    double station_cost = 0,
+           vehicle_cost = 0,
+           trip_cost    = 0;
+
+    // for each vehicle, adds the cost of acquisition
+    vehicle_cost = this->all_vehicles.size() * vehicle_c::COST_PER_VEHICLE;
+
+    // checks which stations were used and adds up their cost
+    for (auto station_index: this->s_ind)
+        if  (static_cast<Station*>(this->vertices_list[station_index])->is_used)
+            station_cost += station_c::COST_PER_STATION;
+
+    // for each vehicle, calculate the trip cost
+    for (auto vehicle: this->all_vehicles) {
+        // counts the transitions from one vertex to another
+        int num_trips = vehicle.vehicle_path.size()-1;
+        for (auto vertex: vehicle.vehicle_path) {
+            // adds the transition within the request vertex (origin -> destination)
+            if  (vertex.vertex_type == 'r')
+                num_trips += 1;
+        }
+        trip_cost += num_trips * request_c::COST_PER_TRIP;
+    }
+
+    return (station_cost + vehicle_cost + trip_cost);
 }
 
 std::vector<Vehicle> Candidate::get_all_vehicles(){
     return this->all_vehicles;
+}
+
+double Candidate::get_candidate_cost() {
+    return this->candidate_cost;
 }

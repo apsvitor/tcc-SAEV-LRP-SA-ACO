@@ -11,17 +11,20 @@ AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list)
 void AntColonyOptimization::run() {
 /**
  * This method executes the ACO algorithm:
- * 1. While current_iteration != max_iterations
- * 2. Create a colony of ants (set of feasible solutions)
- * 3. Call for a local search metaheuristic (Simulated Annealing)
- * 4. Improved ants (solutions) are used to update the pheromone matrix
- * 5. Ouputs the best solution found.
+ * While current_iteration != max_iterations
+ *      1. Create a colony of ants (set of feasible solutions)
+ *      2. Call for a local search metaheuristic (Simulated Annealing)
+ *      3. Improved ants (solutions) are used to update the pheromone matrix
+ *      4. Ouputs the best solution found.
 */
     // STEP 1
     for (int iter = 0; iter < aco_c::MAX_ITERATIONS; iter++) {
         // Building a new generation
         std::vector<Candidate> ant_colony;
         ant_colony = this->_ant_builder(ant_colony);
+        // Local search (Simulated Annealing)
+
+        // 
         
     }
 
@@ -64,7 +67,7 @@ std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate
         // this methods must take into account the pheromones
         // probably I'll have to alter it when it comes to randomization.
         new_ant->generate_candidate(this->pheromone_matrix);
-        std::cout << "Candidate[" << i+1 << "]:" << std::endl;
+        std::cout << "Candidate[" << i+1 << "] cost: RMB$ " << new_ant->get_candidate_cost() << std::endl;
         std::vector<Vehicle> all_vehicles = new_ant->get_all_vehicles();
         for (auto vehicle: all_vehicles) {
             std::cout << "Vehicle [" << vehicle.vehicle_id << "]: ";

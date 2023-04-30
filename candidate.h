@@ -30,6 +30,8 @@ private:
                     std::map<pkey, float> &pheromone_matrix,
                     Vehicle *car_pointer);
 
+    double      __calculate_candidate_cost();
+
 public:
     Candidate(
             std::vector<Vertex *>   vertices_list,
