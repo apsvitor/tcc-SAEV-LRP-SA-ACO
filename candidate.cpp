@@ -16,7 +16,7 @@ Candidate::Candidate(
 int Candidate::__station_randomizer() {
     // returns the index for the station in the vertices list
     int num_stations = this->s_ind.size();
-    int s_index =  random_gen::random_int(0, num_stations);
+    int s_index =  random_gen::random_int(0, num_stations-1);
     return this->s_ind[s_index];
 }
 
@@ -31,7 +31,7 @@ Vertex* Candidate::__find_a_station_to_stop(Vehicle *car_pointer) {
     // It is assumed that the input will be "friendly enough" to never 
     // reach this part. It must be possible for a vehicle to answer
     // requests and get back to any station given a minimum charge.
-    std::cout << "Bad entry on finding a station to stop\n";
+    std::cout << "Bad entry on finding a station to stop" << std::endl;
     return nullptr;
 }
 
@@ -74,7 +74,7 @@ Vertex* Candidate::__choose_next_edge(
         if  (random_probability <= ph_ind.first)
             return current_v->adj_list[ph_ind.second];
     }    
-    std::cout << "Bad entry on finding an edge to finish the candidate\n";
+    std::cout << "Bad entry on finding an edge to finish the candidate" << std::endl;
     return nullptr;
 }
 
@@ -86,13 +86,13 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     
     Vertex* next_v = __choose_next_edge(pheromone_matrix, current_v);
     std::cout << "Current: " << current_v->vertex_type << '_' << current_v->vertex_id 
-              << " | Chosen: " << next_v->vertex_type << '_' << next_v->vertex_id << '\n';
+              << " | Chosen: " << next_v->vertex_type << '_' << next_v->vertex_id << std::endl;
     // is it possible?
     bool is_on_time = car_pointer->is_time_feasible(next_v);
     bool has_energy = car_pointer->is_energy_feasible(next_v);
 
     if  (is_on_time && has_energy) {
-        std::cout << "Movement succesfully done!\n";
+        std::cout << "Movement succesfully done!" << std::endl;
         if  (next_v->vertex_type == 's') {
             static_cast<Station*>(car_pointer->current_vertex)->is_used = true;
             car_pointer->update_vehicle_recharge(next_v);
@@ -107,7 +107,7 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
         if  (this->num_requests)
             __path_builder(pheromone_matrix, car_pointer);
         else {
-            std::cout << "No more requests to do. Path-finding to a station.\n";
+            std::cout << "No more requests to do. Path-finding to a station." << std::endl;
             Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
             car_pointer->add_vertex_to_vehicle_path(*final_vertex);
             car_pointer->current_vertex = final_vertex;
@@ -115,7 +115,7 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     }
     // if the vehicle cant complete the next_v task there are 2 scenarios:
     else if (car_pointer->current_vertex->vertex_type == 's') {
-        std::cout << "Already at a station. Ceases all activity.\n";
+        std::cout << "Already at a station. Ceases all activity." << std::endl;
         // In this case the vehicle is considered to have exhausted its uses.
         // Just return the path that was already built.
         // DUVIDA: devo realmente parar ou abasteço o veículo e retomo a recursão?
@@ -128,7 +128,7 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
         Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
         std::cout << "At request r_" << car_pointer->current_vertex->vertex_id << ", tried to go to "
                   << next_v->vertex_type << '_' << next_v->vertex_id << " but couldn't. So it will go to s_"
-                  << final_vertex->vertex_id << " instead.\n";
+                  << final_vertex->vertex_id << " instead." << std::endl;
         car_pointer->add_vertex_to_vehicle_path(*final_vertex);
         car_pointer->current_vertex = final_vertex;
     }
@@ -147,10 +147,10 @@ void Candidate::generate_candidate(std::map < pkey, float> &pheromone_matrix) {
             static_cast<Station*>(v)->is_used = false;
     }
     while(this->num_requests > 0) {
-        std::cout << "Remaining Requests: " << this->num_requests << std::endl;
+        std::cout << "Remaining Requests: " << this->num_requests << std::endl; 
         // acquire a vehicle
         car_pointer = __generate_new_vehicle(v_index++);
-        std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << '\n';
+        std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << std::endl;
         // build the path for the vehicle
         __path_builder(pheromone_matrix, car_pointer);
         // add vehicle to the solution
