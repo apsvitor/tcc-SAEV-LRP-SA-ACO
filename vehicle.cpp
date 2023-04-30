@@ -37,7 +37,7 @@ double Vehicle::__calculate_energy_of_trip(Vertex *next_v) {
 }
 
 bool Vehicle::is_time_feasible(Vertex* next_v) {
-    if  (this->current_vertex->vertex_type == 's')
+    if  (next_v->vertex_type == 's')
         return true;
     int trip_time_cost = __calculate_time_of_trip(next_v);
     if  (this->time_of_vehicle + trip_time_cost <= 

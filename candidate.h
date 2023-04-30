@@ -21,15 +21,14 @@ private:
     double                  candidate_cost;
 
     int         __station_randomizer();
-    Vehicle*    __generate_new_vehicle(int &v_index);
-    Vertex*     __find_a_station_to_stop(Vehicle *&car_pointer);
+    Vehicle*    __generate_new_vehicle(int v_index);
+    Vertex*     __find_a_station_to_stop(Vehicle *car_pointer);
     Vertex*     __choose_next_edge(
                     std::map<pkey, float> &pheromone_matrix,
                     Vertex *current_v);
-    void        __answer_request(Vertex *request);
     void        __path_builder(
                     std::map<pkey, float> &pheromone_matrix,
-                    Vehicle *&car_pointer);
+                    Vehicle *car_pointer);
 
 public:
     Candidate(
@@ -40,10 +39,5 @@ public:
     void generate_candidate(std::map <pkey, float> &pheromone_matrix);
 
     std::vector<Vehicle> get_all_vehicles();
-    std::queue<Request> get_all_requests();
-    std::vector<Station> get_all_stations();
     double get_candidate_cost();
-    void set_candidate_cost(double cost);
-    bool replace_vehicle();
-    bool steal_request();
 };

@@ -29,35 +29,4 @@ int main() {
     AntColonyOptimization ACO = AntColonyOptimization(vertices_list);
     ACO.run();
     inp.close();
-
-    // // Input data
-    // int                     num_of_stations;
-    // int                     num_of_requests;
-    // std::vector<Request>    all_requests;
-    // std::vector<Station>    all_stations;
-
-    // std::ifstream inp("entrada.txt");
-    
-    // // Load stations
-    // int x_station, y_station;
-    // inp >> num_of_stations;
-    // for (int station=1; station <= num_of_stations; station++) {
-    //     inp >> x_station >> y_station;
-    //     all_stations.push_back(Station(Point(x_station, y_station), station));
-    // }
-
-    // // Load Requests
-    // int x_origin, y_origin, x_destination, y_destination, pickup_time;
-    // inp >> num_of_requests;
-    // for (int request=1; request<=num_of_requests; request++) {
-    //     inp >> x_origin >> y_origin >> x_destination >> y_destination >> pickup_time;
-    //     all_requests.push_back(
-    //         Request(Point(x_origin, y_origin), 
-    //                 Point(x_destination, y_destination), 
-    //                 pickup_time, 
-    //                 request
-    //         )
-    //     );
-    // }
-    // inp.close();
 }

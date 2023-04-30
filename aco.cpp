@@ -6,24 +6,6 @@ AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list)
     this->vertices_list = vertices_list;
     // create the graph-like structure and pheromone matrix from input data
     _create_pheromone_matrix();
-    std::cout << "Sanity Check - Printing Vertices\n";
-    for (auto &v: vertices_list) {
-        std::cout << "Vertice: " << v->vertex_type << '_' << v->vertex_id << " -> ";
-        for (auto &n: v->adj_list) {
-            std::cout << " [" << n->vertex_type << '_' << n->vertex_id << "] ";
-        }
-        std::cout << '\n';
-    }
-    std::cout << "Sanity Check - Printing Pheromone Matrix\n";
-    for (auto k: pheromone_matrix) {
-        pci id_i = k.first.first, id_j = k.first.second;
-        std::cout << '[' << id_i.first << '_' << id_i.second << ", "
-                    << id_j.first << '_' << id_j.second << "] "
-             << " = " << k.second << '\n';
-    }
-
-    // TODO: build the stations and requests indices vector for candidate
-    std::cout << "\n----> End of ACO initialization\n";
 }
 
 void AntColonyOptimization::run() {
@@ -40,6 +22,7 @@ void AntColonyOptimization::run() {
         // Building a new generation
         std::vector<Candidate> ant_colony;
         ant_colony = this->_ant_builder(ant_colony);
+        
     }
 
 }
@@ -81,6 +64,16 @@ std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate
         // this methods must take into account the pheromones
         // probably I'll have to alter it when it comes to randomization.
         new_ant->generate_candidate(this->pheromone_matrix);
+        std::cout << "Candidate[" << i+1 << "]:\n";
+        std::vector<Vehicle> all_vehicles = new_ant->get_all_vehicles();
+        for (auto vehicle: all_vehicles) {
+            std::cout << "Vehicle [" << vehicle.vehicle_id << "]: ";
+            for (auto vertex: vehicle.vehicle_path) {
+                std::cout << '[' << vertex.vertex_type << '_' << vertex.vertex_id << "] -> ";
+            }
+            std::cout << '\n';
+        }
+        std::cout << "----------------------\n";
         ant_colony.push_back(*new_ant);
     }
     return ant_colony;
@@ -93,9 +86,9 @@ void AntColonyOptimization::_update_pheromone_trail(std::vector<Candidate> ant_c
         // tau(i,j) = (1-ro) + sum( g(s) )
         // g(s) -> evaluation function 
         double sum_g = 0;
-        for (auto ant: ant_colony) {
-            sum_g += 1/(ant.get_candidate_cost());
-        }
+        // for (auto ant: ant_colony) {
+        //     sum_g += 1/(ant.get_candidate_cost());
+        // }
         // this->pheromone_matrix[edge]->second = this->pheromone_matrix[edge].second*(1-this->ro) + sum_g;
     }
 
