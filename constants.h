@@ -41,6 +41,15 @@ namespace request_c {
     const int       LATENESS_EPS        = 5;        // acceptable lateness (min)
 }
 
+namespace heuristic_info {
+    // opening a new station has a large cost, no need to compute time loss
+    const double    OPEN_NEW_STATION    = 1/station_c::COST_PER_STATION;
+    // answering a request has an imbued trip within the request, hence 2 times the cost per trip
+    const double    ANSWER_REQUEST      = 1/(2*(request_c::COST_PER_TRIP));
+    // recharging a vehicle has a trip cost and also a time cost to recharge (considering a 100% recharge)
+    const double    RECHARGE_VEHICLE    = 1/((request_c::COST_PER_TRIP) + vehicle_c::CHARGING_RATE * vehicle_c::MAX_BATTERY);
+}
+
 // key pair for the pheromone matrix. Ex.: ('s', 1) -> Station 1
 typedef std::pair<char, int> pci;
 // key structure for the pheromone matrix. Ex.: (vertex_i, vertex_j)

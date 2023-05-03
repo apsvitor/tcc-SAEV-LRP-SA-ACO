@@ -48,18 +48,37 @@ Vehicle* Candidate::__generate_new_vehicle(int v_index) {
 Vertex* Candidate::__choose_next_edge(
         std::map<pkey, float> &pheromone_matrix,
         Vertex *current_v) {
+    
+    // heuristic information: each movement will have a 
+    
     // given a vehicle's current vertex determine all its neighbors
     std::vector<Vertex*> adj_list = current_v->adj_list;
     // cumulative sum to represent the weights of the edges
     int index=0;    
     std::vector<pdi> cumulative_sum;
     pci id_i = pci(current_v->vertex_type, current_v->vertex_id);
-    
+
+    // auxiliary ACO variables
+    double sum_components_value = 0, heuristic_value, pheromone_value;
     for (auto neighbor_v: adj_list) {
         pci id_j = pci(neighbor_v->vertex_type, neighbor_v->vertex_id);
         // if it is a request that's already done it musn't be taken into account
         if  (!(neighbor_v->vertex_type == 'r' && static_cast<Request*>(neighbor_v)->is_done == true)) {
-            cumulative_sum.push_back(pdi(pheromone_matrix[pkey(id_i, id_j)], index));
+            // heuristic information:
+            if  (neighbor_v->vertex_type == 's' && static_cast<Station*>(neighbor_v)->is_used == 0)
+                heuristic_value = heuristic_info::OPEN_NEW_STATION;
+            else if (neighbor_v->vertex_type == 'r')
+                heuristic_value = heuristic_info::ANSWER_REQUEST;
+            else
+                heuristic_value = heuristic_info::RECHARGE_VEHICLE;
+            heuristic_value = pow(heuristic_value, aco_c::BETA);
+
+            // pheromone value
+            pheromone_value = pow(pheromone_matrix[pkey(id_i, id_j)], aco_c::ALPHA);
+
+            sum_components_value += (pheromone_value * heuristic_value);
+            // fix the value pushed into the cumulative sum to consider heuristic info and pheromone value
+            cumulative_sum.push_back(pdi((pheromone_value * heuristic_value), index));
             if  (cumulative_sum.size() > 1)
                 cumulative_sum[cumulative_sum.size()-1].first += cumulative_sum[cumulative_sum.size()-2].first;
         }
@@ -67,11 +86,11 @@ Vertex* Candidate::__choose_next_edge(
     }
 
     // finds out which edge will be randomly chosen according to its interval
-    double max_sum = cumulative_sum[cumulative_sum.size()-1].first;
+    double max_sum = (cumulative_sum[cumulative_sum.size()-1].first) / (sum_components_value);
     double random_probability = random_gen::random_float(0.0, 1.0) * max_sum;
     // TODO: implement a binary search for larger/denser instances
     for (auto ph_ind: cumulative_sum){
-        if  (random_probability <= ph_ind.first)
+        if  (random_probability <= (ph_ind.first) / (sum_components_value))
             return current_v->adj_list[ph_ind.second];
     }    
     std::cout << "Bad entry on finding an edge to finish the candidate" << std::endl;
