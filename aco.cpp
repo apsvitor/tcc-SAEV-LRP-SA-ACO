@@ -4,6 +4,7 @@
 AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list){
     // input data
     this->vertices_list = vertices_list;
+    this->global_best = nullptr;
     // create the graph-like structure and pheromone matrix from input data
     _create_pheromone_matrix();
 }
@@ -64,8 +65,6 @@ std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate
     Candidate *new_ant;
     for (int i=0; i<aco_c::MAX_ANTS; i++) {
         new_ant = new Candidate(this->vertices_list, this->s_ind, this->r_ind);
-        // this methods must take into account the pheromones
-        // probably I'll have to alter it when it comes to randomization.
         new_ant->generate_candidate(this->pheromone_matrix);
         std::cout << "Candidate[" << i+1 << "] cost: RMB$ " << new_ant->get_candidate_cost() << std::endl;
         std::vector<Vehicle> all_vehicles = new_ant->get_all_vehicles();
@@ -78,15 +77,21 @@ std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate
         }
         std::cout << "----------------------" << std::endl;
         ant_colony.push_back(*new_ant);
+        if  (this->global_best && new_ant->get_candidate_cost() < this->global_best->get_candidate_cost()){
+            std::cout << "New Global Best Found: " << std::endl;
+            this->global_best = new_ant;
+        }
     }
     return ant_colony;
 }
 
 void AntColonyOptimization::_update_pheromone_trail(std::vector<Candidate> ant_colony){
     // updates the pheromone matrix
+    // for each movement, 
     for (auto edge: this->pheromone_matrix) {
+        this->pheromone_matrix[edge.first] *= (1-aco_c::RO);
         // calculate a new pheromone value for a given edge
-        // tau(i,j) = (1-ro) + sum( g(s) )
+        // tau(i,j) = (1-ro)*tau(i,j) + sum( g(s) )
         // g(s) -> evaluation function 
         double sum_g = 0;
         // for (auto ant: ant_colony) {
