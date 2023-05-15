@@ -17,12 +17,12 @@ private:
     std::vector<int>        r_ind;              // request indices
 
     Candidate *global_best;
+    Candidate *iteration_best;
 
    // auxiliary methods
     std::vector<Candidate>   _ant_builder(std::vector<Candidate>);
     void                     _create_pheromone_matrix();
-    void                     _update_pheromone_trail(std::vector<Candidate> ant_colony);
-    void                     _total_cost();
+    void                     _update_pheromone_trail();
 
 public:
     AntColonyOptimization(std::vector<Vertex*> vertices_list);

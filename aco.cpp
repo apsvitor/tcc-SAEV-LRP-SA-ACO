@@ -4,31 +4,25 @@
 AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list){
     // input data
     this->vertices_list = vertices_list;
-    this->global_best = nullptr;
+    this->global_best = new Candidate();
+    this->iteration_best = global_best;
     // create the graph-like structure and pheromone matrix from input data
     _create_pheromone_matrix();
 }
 
 void AntColonyOptimization::run() {
-/**
- * This method executes the ACO algorithm:
- * While current_iteration != max_iterations
- *      1. Create a colony of ants (set of feasible solutions)
- *      2. Call for a local search metaheuristic (Simulated Annealing)
- *      3. Improved ants (solutions) are used to update the pheromone matrix
- *      4. Ouputs the best solution found.
-*/
-    // STEP 1
+    
+    SimulatedAnnealingOptimization sa_opt;
     for (int iter = 0; iter < aco_c::MAX_ITERATIONS; iter++) {
-        // Building a new generation
         std::vector<Candidate> ant_colony;
         ant_colony = this->_ant_builder(ant_colony);
         // Local search (Simulated Annealing)
-
-        // 
+        sa_opt.run(this->iteration_best, this->pheromone_matrix);
+        // Update the pheromone matrix
+        _update_pheromone_trail();
         
     }
-
+    std::cout << "BEST GLOBAL FOUND: RMB$ " << this->global_best->get_candidate_cost() << std::endl;
 }
 
 void AntColonyOptimization::_create_pheromone_matrix() {
@@ -63,21 +57,27 @@ void AntColonyOptimization::_create_pheromone_matrix() {
 std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate> ant_colony) {
     // an ant must contain a full solution
     Candidate *new_ant;
+    double iteration_best_cost = INT64_MAX;
     for (int i=0; i<aco_c::MAX_ANTS; i++) {
         new_ant = new Candidate(this->vertices_list, this->s_ind, this->r_ind);
         new_ant->generate_candidate(this->pheromone_matrix);
         std::cout << "Candidate[" << i+1 << "] cost: RMB$ " << new_ant->get_candidate_cost() << std::endl;
-        std::vector<Vehicle> all_vehicles = new_ant->get_all_vehicles();
+        std::vector<Vehicle*> all_vehicles = new_ant->get_all_vehicles();
         for (auto vehicle: all_vehicles) {
-            std::cout << "Vehicle [" << vehicle.vehicle_id << "]: ";
-            for (auto vertex: vehicle.vehicle_path) {
+            std::cout << "Vehicle [" << vehicle->vehicle_id << "]: ";
+            for (auto vertex: vehicle->vehicle_path) {
                 std::cout << '[' << vertex.vertex_type << '_' << vertex.vertex_id << "] -> ";
             }
             std::cout << std::endl;
         }
         std::cout << "----------------------" << std::endl;
         ant_colony.push_back(*new_ant);
-        if  (this->global_best && new_ant->get_candidate_cost() < this->global_best->get_candidate_cost()){
+        double current_ant_cost = new_ant->get_candidate_cost();
+        if  (current_ant_cost < iteration_best_cost) {
+            iteration_best_cost = current_ant_cost;
+            this->iteration_best = new_ant;
+        }
+        if  (current_ant_cost < this->global_best->get_candidate_cost()){
             std::cout << "New Global Best Found: " << std::endl;
             this->global_best = new_ant;
         }
@@ -85,23 +85,27 @@ std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate
     return ant_colony;
 }
 
-void AntColonyOptimization::_update_pheromone_trail(std::vector<Candidate> ant_colony){
+void AntColonyOptimization::_update_pheromone_trail(){
     // updates the pheromone matrix
-    // for each movement, 
-    for (auto edge: this->pheromone_matrix) {
+    // pheromone evaporation
+    for (auto edge: this->pheromone_matrix)
         this->pheromone_matrix[edge.first] *= (1-aco_c::RO);
-        // calculate a new pheromone value for a given edge
-        // tau(i,j) = (1-ro)*tau(i,j) + sum( g(s) )
-        // g(s) -> evaluation function 
-        double sum_g = 0;
-        // for (auto ant: ant_colony) {
-        //     sum_g += 1/(ant.get_candidate_cost());
-        // }
-        // this->pheromone_matrix[edge]->second = this->pheromone_matrix[edge].second*(1-this->ro) + sum_g;
+
+    // deposit pheromone on the best paths
+    Candidate* ant = this->global_best;
+    for (int i=0; i<2; i++) {
+        std::vector<Vehicle*> all_vehicles = ant->get_all_vehicles();
+        double candidate_quality = 1 / (ant->get_candidate_cost());
+
+        for (auto &vehicle: all_vehicles) {
+            std::vector<Vertex> full_path = vehicle->vehicle_path;
+
+            for (int i=0; i<full_path.size()-1; i++) {
+                pci id_i = pci(full_path[i].vertex_type, full_path[i].vertex_id);
+                pci id_j = pci(full_path[i+1].vertex_type, full_path[i+1].vertex_id);
+                this->pheromone_matrix[pkey(id_i, id_j)] += candidate_quality;
+            }
+        }
+        ant = this->iteration_best;
     }
-
-}
-
-void AntColonyOptimization::_total_cost(){
-    // calculates the total cost given a candidate solution
 }

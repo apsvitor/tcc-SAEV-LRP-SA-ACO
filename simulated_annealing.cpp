@@ -1,3 +1,90 @@
+#include "simulated_annealing.h"
+
+SimulatedAnnealingOptimization::SimulatedAnnealingOptimization() {
+    this->current_iteration = 0;
+    this->current_temperature = sa_c::INITIAL_T;
+}
+
+void SimulatedAnnealingOptimization::__disturb_candidate(
+        Candidate *ant,
+        std::map <pkey, float> &pheromone_matrix) {
+    // disturb a candidate
+    // disturbance method:
+        // randomly chooses a vehicle within the candidate
+        // get all requests which aren't done + the vehicle's request
+        // rebuilds the vehicle's path
+    std::vector<Vehicle*> all_vehicles = ant->get_all_vehicles();
+    int replace_index = random_gen::random_int(0, int(all_vehicles.size())-1);
+    
+    // TEST--------------------------------------------------------------------------
+    std::cout << "DONE REQUESTS BEFORE: ";
+    for (auto v: ant->vertices_list)
+        if  (v->vertex_type == 'r' && static_cast<Request*>(v)->is_done)
+            std::cout << v->vertex_type << '_' << v->vertex_id << " | ";
+    std::cout << std::endl;
+    // END---------------------------------------------------------------------------
+
+    // find the requests answered by the original vehicle and set them to unanswered
+    int requests_done = 0;
+    for (auto vertex: all_vehicles[replace_index]->vehicle_path)
+        if  (vertex.vertex_type == 'r'){
+            static_cast<Request*>(&vertex)->is_done = false;
+            requests_done++;
+        }
+    ant->undo_requests(requests_done);
+    // TEST--------------------------------------------------------------------------
+    std::cout << "DONE REQUESTS AFTER: ";
+    for (auto v: ant->vertices_list)
+        if  (v->vertex_type == 'r' && static_cast<Request*>(v)->is_done)
+            std::cout << v->vertex_type << '_' << v->vertex_id << " | ";
+    std::cout << std::endl;
+    // END---------------------------------------------------------------------------
+    
+    Vehicle *new_vehicle = ant->__generate_new_vehicle(all_vehicles[replace_index]->vehicle_id);
+    std::cout << "Quebra?" << std::endl;
+    ant->__path_builder(pheromone_matrix, new_vehicle);
+    std::cout << "Quebra2?" << std::endl;
+    double new_cost = ant->__calculate_candidate_cost(),
+           acceptance_probability = random_gen::random_float(0.0, 1.0),
+           calculated_probability = __probability_of_accepting(new_cost);
+            
+    if  (calculated_probability >= acceptance_probability)
+        ant->change_vehicle(replace_index, new_vehicle);
+    else {
+        for (auto vertex: all_vehicles[replace_index]->vehicle_path)
+            if  (vertex.vertex_type == 'r')
+                static_cast<Request*>(&vertex)->is_done = true;
+    }
+}
+
+double SimulatedAnnealingOptimization::__probability_of_accepting(double new_cost) {
+    if  (new_cost < this->best_cost)
+        return 1.0;
+    return exp(-abs(new_cost - this->best_cost) / (this->current_temperature));
+}
+
+void SimulatedAnnealingOptimization::run(
+    Candidate *ant,
+    std::map <pkey, float> &pheromone_matrix) {
+    int neighbors_search_space = sa_c::MAX_NEIGHBORS_ITERATIONS;
+    while (this->current_iteration < sa_c::MAX_ITERATIONS && 
+           this->current_temperature > sa_c::MIN_T &&
+           neighbors_search_space) {
+        //
+
+        // for each temperature level explore the neighbors
+        for (int i=0; i<neighbors_search_space; i++) {
+            // disturb a candidate
+            __disturb_candidate(ant, pheromone_matrix);
+        }
+
+        // stopping conditions update
+        this->current_iteration += 1;
+        this->current_temperature *= sa_c::COOLING_FACTOR;
+        neighbors_search_space *= (1-sa_c::NEIGHBOR_REDUCTION_FACTOR);
+    }
+}
+
 /*
 #include "simulated_annealing.h"
 #include <random>

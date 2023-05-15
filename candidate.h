@@ -8,17 +8,20 @@
 
 class Candidate {
 private:
-    std::vector<Vehicle>    all_vehicles;   // solution per-say
-    std::vector<Vertex*>    vertices_list;  // input
+    std::vector<Vehicle*>   all_vehicles;   // solution per-say
+    
 
     std::vector<int>        s_ind;          // station indices
     std::vector<int>        r_ind;          // request indices
 
-    int                     num_requests;   // probably useless
-    int                     num_stations;   // probably useless
-    int                     num_vertices;   // probably useless
+    int                     remaining_requests;
+    int                     ignored_requests;
+    int                     num_stations;
 
     double                  candidate_cost;
+
+public:
+    std::vector<Vertex*>    vertices_list;  // input
 
     int         __station_randomizer();
     Vehicle*    __generate_new_vehicle(int v_index);
@@ -32,7 +35,7 @@ private:
 
     double      __calculate_candidate_cost();
 
-public:
+    Candidate();
     Candidate(
             std::vector<Vertex *>   vertices_list,
             std::vector<int>        s_ind,
@@ -40,6 +43,8 @@ public:
     );
     void generate_candidate(std::map <pkey, float> &pheromone_matrix);
 
-    std::vector<Vehicle> get_all_vehicles();
+    std::vector<Vehicle*> get_all_vehicles();
     double get_candidate_cost();
+    void change_vehicle(int index, Vehicle *new_vehicle);
+    void undo_requests(int undo_count);
 };

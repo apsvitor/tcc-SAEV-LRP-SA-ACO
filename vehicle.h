@@ -9,11 +9,12 @@
 
 class Vehicle {
 public:
-    int                     vehicle_id;    
+    int                     vehicle_id;
     std::vector<Vertex>     vehicle_path;
     Vertex                  *current_vertex;
     double                  current_battery;
     double                  time_of_vehicle;
+    bool                    is_recharging;
 
     Vehicle(Vertex *starting_point, int vehicle_id);
     
@@ -23,6 +24,7 @@ public:
     int                     __calculate_time_of_trip(Vertex *next_v);
     double                  __calculate_energy_of_trip(Vertex *next_v);
     double                  __calculate_distance_of_trip(Vertex *next_v);
+    double                  __calculate_distance_of_request(Vertex *next_v);
     
     bool                    is_time_feasible(Vertex *next_v);
     bool                    is_energy_feasible(Vertex *next_v);

@@ -1,3 +1,24 @@
+#pragma once
+#include "candidate.h"
+
+class SimulatedAnnealingOptimization {
+private:
+    int         current_iteration;
+    double      current_temperature;
+    double      best_cost;
+
+    void        __disturb_candidate(
+            Candidate *ant,
+            std::map <pkey, float> &pheromone_matrix);
+    
+    double      __probability_of_accepting(double new_cost);
+
+
+public:
+    SimulatedAnnealingOptimization();
+    void run(Candidate *ant, std::map <pkey, float> &pheromone_matrix);
+};
+
 /*
 #pragma once
 #include "constants.h"

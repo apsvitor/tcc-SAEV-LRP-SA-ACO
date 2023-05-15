@@ -25,7 +25,7 @@ namespace aco_c{
 // Vehicles
 namespace vehicle_c {
     const double    MAX_BATTERY         = 15.0;     // KWh
-    const double    CONSUMPTION_RATE    = 0.15;     // KWh/Km  
+    const double    CONSUMPTION_RATE    = 0.15;     // KWh/Km
     const double    MEAN_VELOCITY       = 35.0/60;  // Km/min
     const double    CHARGING_RATE       = 0.4;      // KW/min
     const double    MIN_BATTERY_LEVEL   = 0.20;     // %
@@ -39,6 +39,7 @@ namespace station_c {
 namespace request_c {
     const double    COST_PER_TRIP       = 19.37;    // $RMB
     const int       LATENESS_EPS        = 5;        // acceptable lateness (min)
+    const double    MIN_REQUESTS_DONE   = 1.00;     // %
 }
 
 namespace heuristic_info {
@@ -48,6 +49,10 @@ namespace heuristic_info {
     const double    ANSWER_REQUEST      = 1/(2*(request_c::COST_PER_TRIP));
     // recharging a vehicle has a trip cost and also a time cost to recharge (considering a 100% recharge)
     const double    RECHARGE_VEHICLE    = 1/((request_c::COST_PER_TRIP) + vehicle_c::CHARGING_RATE * vehicle_c::MAX_BATTERY);
+}
+
+namespace problem_type {
+    const bool      IS_PARTIAL_RECHARGE = true;
 }
 
 // key pair for the pheromone matrix. Ex.: ('s', 1) -> Station 1

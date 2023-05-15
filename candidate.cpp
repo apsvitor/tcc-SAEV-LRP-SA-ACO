@@ -1,5 +1,9 @@
 #include "candidate.h"
 
+Candidate::Candidate() {
+    // dummy candidate
+    this->candidate_cost = INT32_MAX;
+}
 
 Candidate::Candidate(
         std::vector<Vertex*> vertices_list,
@@ -9,8 +13,8 @@ Candidate::Candidate(
     this->vertices_list = vertices_list;
     this->s_ind         = s_ind;
     this->r_ind         = r_ind;
-    this->num_requests  = r_ind.size();
-
+    this->remaining_requests  = r_ind.size();
+    this->ignored_requests = std::floor(this->remaining_requests * (1.0 - request_c::MIN_REQUESTS_DONE));
 }
 
 int Candidate::__station_randomizer() {
@@ -24,8 +28,9 @@ Vertex* Candidate::__find_a_station_to_stop(Vehicle *car_pointer) {
     Vertex *final_station;
     for (auto ind: this->s_ind) {
         final_station = this->vertices_list[ind];
-        bool has_energy = car_pointer->is_energy_feasible(final_station);
-        if  (has_energy)
+        double distance = car_pointer->current_vertex->p_xy.get_distance(final_station->p_xy),
+               energy   = distance * vehicle_c::CONSUMPTION_RATE;
+        if  (car_pointer->current_battery - energy > 0)
             return final_station;
     }
     // It is assumed that the input will be "friendly enough" to never 
@@ -114,16 +119,18 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
         // std::cout << "Movement succesfully done!" << std::endl;
         if  (next_v->vertex_type == 's') {
             static_cast<Station*>(next_v)->is_used += 1;
-            car_pointer->update_vehicle_recharge(next_v);
+            // must change to support partial recharge :(
+            // THIS MUST BE REMOVED
+            // car_pointer->update_vehicle_recharge(next_v);
         }
         else { // is a request
             static_cast<Request*>(next_v)->is_done = true;
-            this->num_requests--;
+            this->remaining_requests--;
             car_pointer->update_vehicle_request(next_v);
         }
         car_pointer->current_vertex = next_v;
         car_pointer->add_vertex_to_vehicle_path(*next_v);
-        if  (this->num_requests)
+        if  (this->remaining_requests != this->ignored_requests)
             __path_builder(pheromone_matrix, car_pointer);
         else if (car_pointer->current_vertex->vertex_type == 'r') {
             // std::cout << "No more requests to do. Path-finding to a station." << std::endl;
@@ -138,13 +145,10 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
         // std::cout << "Already at a station. Ceases all activity." << std::endl;
         // In this case the vehicle is considered to have exhausted its uses.
         // Just return the path that was already built.
-        // DUVIDA: devo realmente parar ou abasteço o veículo e retomo a recursão?
         static_cast<Station*>(current_v)->free_spaces += 1;
     }
     else if (car_pointer->current_vertex->vertex_type == 'r') {
         // In this case the vehicle must find a station to port.
-        // DUVIDA: devo realmente parar ou faço o backtracking até que a busca por
-        //         solução seja finalizada em uma estação (condição acima)?
         Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
         // std::cout << "At request r_" << car_pointer->current_vertex->vertex_id << ", tried to go to "
         //           << next_v->vertex_type << '_' << next_v->vertex_id << " but couldn't. So it will go to s_"
@@ -157,25 +161,27 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     return;
 }
 
-void Candidate::generate_candidate(std::map < pkey, float> &pheromone_matrix) {
+void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
     int v_index=0;
     Vehicle *car_pointer;
-    this->num_requests = this->r_ind.size();
+    this->remaining_requests = this->r_ind.size();
     for (auto v: this->vertices_list) {
         if  (v->vertex_type == 'r')
             static_cast<Request*>(v)->is_done = false;
         else
             static_cast<Station*>(v)->is_used = 0;
     }
-    while(this->num_requests > 0) {
-        // std::cout << "Remaining Requests: " << this->num_requests << std::endl; 
+    
+    // Concludes candidate generation whenever the minimum threshold is met.
+    while(this->remaining_requests != this->ignored_requests) {
+        // std::cout << "Remaining Requests: " << this->remaining_requests << std::endl; 
         // acquire a vehicle
         car_pointer = __generate_new_vehicle(v_index++);
         // std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << std::endl;
         // build the path for the vehicle
         __path_builder(pheromone_matrix, car_pointer);
         // add vehicle to the solution
-        this->all_vehicles.push_back(*car_pointer);
+        this->all_vehicles.push_back(car_pointer);
     }
 
     // calculate the cost function for the candidate
@@ -198,8 +204,8 @@ double Candidate::__calculate_candidate_cost() {
     // for each vehicle, calculate the trip cost
     for (auto vehicle: this->all_vehicles) {
         // counts the transitions from one vertex to another
-        int num_trips = vehicle.vehicle_path.size()-1;
-        for (auto vertex: vehicle.vehicle_path) {
+        int num_trips = vehicle->vehicle_path.size()-1;
+        for (auto vertex: vehicle->vehicle_path) {
             // adds the transition within the request vertex (origin -> destination)
             if  (vertex.vertex_type == 'r')
                 num_trips += 1;
@@ -210,10 +216,18 @@ double Candidate::__calculate_candidate_cost() {
     return (station_cost + vehicle_cost + trip_cost);
 }
 
-std::vector<Vehicle> Candidate::get_all_vehicles(){
+std::vector<Vehicle*> Candidate::get_all_vehicles(){
     return this->all_vehicles;
 }
 
 double Candidate::get_candidate_cost() {
     return this->candidate_cost;
+}
+
+void Candidate::change_vehicle(int index, Vehicle *new_vehicle){
+    this->all_vehicles[index] = new_vehicle;
+}
+
+void Candidate::undo_requests(int undo_count){
+    this->remaining_requests += undo_count;
 }
