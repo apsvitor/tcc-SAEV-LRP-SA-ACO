@@ -45,6 +45,7 @@ public:
 
     std::vector<Vehicle*> get_all_vehicles();
     double get_candidate_cost();
-    void change_vehicle(int index, Vehicle *new_vehicle);
+    int get_remaining_requests();
+    void change_vehicle(int index, Vehicle *new_vehicle, int new_cost);
     void undo_requests(int undo_count);
 };

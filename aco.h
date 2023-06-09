@@ -16,11 +16,11 @@ private:
     std::vector<int>        s_ind;              // station indices
     std::vector<int>        r_ind;              // request indices
 
-    Candidate *global_best;
-    Candidate *iteration_best;
+    Candidate               *global_best;
+    Candidate               *iteration_best;
 
    // auxiliary methods
-    std::vector<Candidate>   _ant_builder(std::vector<Candidate>);
+    std::vector<Candidate*>  _ant_builder(std::vector<Candidate*>);
     void                     _create_pheromone_matrix();
     void                     _update_pheromone_trail();
 

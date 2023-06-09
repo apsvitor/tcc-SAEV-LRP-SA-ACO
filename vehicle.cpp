@@ -145,28 +145,19 @@ void Vehicle::update_vehicle_request(Vertex *next_v) {
     // updates vehicle state after it answers a request ---------------------------------
     this->is_recharging = false;
     double total_distance = this->current_vertex->p_xy.get_distance(next_v->p_xy);
-    if  (next_v->vertex_type == 'r')
-        total_distance += (static_cast<Request*>(next_v)->request_distance);
+    int time_cost = std::ceil(this->time_of_vehicle + total_distance / vehicle_c::MEAN_VELOCITY);
+    if  (next_v->vertex_type == 'r'){
+        int request_starting_time = static_cast<Request*>(next_v)->pickup_time + request_c::LATENESS_EPS;
+        double request_distance = (static_cast<Request*>(next_v)->request_distance);
+        
+        time_cost = std::max(time_cost, request_starting_time);
+        time_cost += std::ceil(request_distance / vehicle_c::MEAN_VELOCITY);
+        total_distance += request_distance;
+    }
     else
         this->is_recharging = true;
-    
+
     double energy_cost = total_distance * vehicle_c::CONSUMPTION_RATE;
-    int time_cost = std::ceil(total_distance / vehicle_c::MEAN_VELOCITY);
-
     this->current_battery -= energy_cost;
-    this->time_of_vehicle += time_cost;
-
-    // TEST END -------------------------------------------------------------------------
-
-    // double energy_cost          = __calculate_energy_of_trip(next_v);
-    // this->current_battery       -= energy_cost;
-    // double trip_time_cost       = __calculate_time_of_trip(next_v);
-    
-
-    // // This is only used when Partial Recharge is off
-    // // for now it's 100%. Adapt to flexible percentage later.
-    // // ERRO GRAVE
-    // this->current_battery = vehicle_c::MAX_BATTERY;
-    
-    // this->time_of_vehicle += trip_time_cost;
+    this->time_of_vehicle = time_cost;
 }

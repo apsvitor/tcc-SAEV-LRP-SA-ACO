@@ -53,9 +53,6 @@ Vehicle* Candidate::__generate_new_vehicle(int v_index) {
 Vertex* Candidate::__choose_next_edge(
         std::map<pkey, float> &pheromone_matrix,
         Vertex *current_v) {
-    
-    // heuristic information: each movement will have a 
-    
     // given a vehicle's current vertex determine all its neighbors
     std::vector<Vertex*> adj_list = current_v->adj_list;
     // cumulative sum to represent the weights of the edges
@@ -89,6 +86,8 @@ Vertex* Candidate::__choose_next_edge(
         }
         index++;
     }
+    
+    // std::cout << "cum_sum_size: " << cumulative_sum.size() << "  remaining requests: " << this->remaining_requests << std::endl;
 
     // finds out which edge will be randomly chosen according to its interval
     double max_sum = (cumulative_sum[cumulative_sum.size()-1].first) / (sum_components_value);
@@ -107,7 +106,6 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     // calls itself repeatedly until a vehicle exhausts its choices.
     Vertex* current_v = car_pointer->current_vertex;
     // make a move
-    
     Vertex* next_v = __choose_next_edge(pheromone_matrix, current_v);
     // std::cout << "Current: " << current_v->vertex_type << '_' << current_v->vertex_id 
     //           << " | Chosen: " << next_v->vertex_type << '_' << next_v->vertex_id << std::endl;
@@ -118,10 +116,8 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     if  (is_on_time && has_energy) {
         // std::cout << "Movement succesfully done!" << std::endl;
         if  (next_v->vertex_type == 's') {
+            car_pointer->update_vehicle_request(next_v);
             static_cast<Station*>(next_v)->is_used += 1;
-            // must change to support partial recharge :(
-            // THIS MUST BE REMOVED
-            // car_pointer->update_vehicle_recharge(next_v);
         }
         else { // is a request
             static_cast<Request*>(next_v)->is_done = true;
@@ -130,8 +126,9 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
         }
         car_pointer->current_vertex = next_v;
         car_pointer->add_vertex_to_vehicle_path(*next_v);
-        if  (this->remaining_requests != this->ignored_requests)
+        if  (this->remaining_requests > this->ignored_requests){
             __path_builder(pheromone_matrix, car_pointer);
+        }
         else if (car_pointer->current_vertex->vertex_type == 'r') {
             // std::cout << "No more requests to do. Path-finding to a station." << std::endl;
             Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
@@ -189,9 +186,10 @@ void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
 }
 
 double Candidate::__calculate_candidate_cost() {
-    double station_cost = 0,
-           vehicle_cost = 0,
-           trip_cost    = 0;
+    double station_cost     = 0,
+           vehicle_cost     = 0,
+           trip_cost        = 0,
+           penalty_cost     = 0;
 
     // for each vehicle, adds the cost of acquisition
     vehicle_cost = this->all_vehicles.size() * vehicle_c::COST_PER_VEHICLE;
@@ -213,7 +211,10 @@ double Candidate::__calculate_candidate_cost() {
         trip_cost += num_trips * request_c::COST_PER_TRIP;
     }
 
-    return (station_cost + vehicle_cost + trip_cost);
+    if  (this->ignored_requests)
+        penalty_cost = this->ignored_requests * request_c::UNSERVED_PENALTY;
+
+    return (station_cost + vehicle_cost + trip_cost + penalty_cost);
 }
 
 std::vector<Vehicle*> Candidate::get_all_vehicles(){
@@ -224,10 +225,15 @@ double Candidate::get_candidate_cost() {
     return this->candidate_cost;
 }
 
-void Candidate::change_vehicle(int index, Vehicle *new_vehicle){
+void Candidate::change_vehicle(int index, Vehicle *new_vehicle, int new_cost){
     this->all_vehicles[index] = new_vehicle;
+    this->candidate_cost = new_cost;
 }
 
 void Candidate::undo_requests(int undo_count){
     this->remaining_requests += undo_count;
+}
+
+int Candidate::get_remaining_requests(){
+    return this->remaining_requests;
 }

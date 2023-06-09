@@ -12,12 +12,21 @@ AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list)
 
 void AntColonyOptimization::run() {
     
-    SimulatedAnnealingOptimization sa_opt;
+    
     for (int iter = 0; iter < aco_c::MAX_ITERATIONS; iter++) {
-        std::vector<Candidate> ant_colony;
+        std::cout << "=========== ITER = " << iter << "===========" << std::endl;
+        std::vector<Candidate*> ant_colony;
         ant_colony = this->_ant_builder(ant_colony);
         // Local search (Simulated Annealing)
+        SimulatedAnnealingOptimization sa_opt;
+        std::cout << "Cost before SA: " << this->iteration_best->get_candidate_cost() << std::endl;
         sa_opt.run(this->iteration_best, this->pheromone_matrix);
+        std::cout << "Cost after SA: " << this->iteration_best->get_candidate_cost() << std::endl;
+        for (auto v: this->vertices_list){
+            if  (v->vertex_type == 'r' && static_cast<Request*>(v)->is_done){
+                std::cout << v->vertex_type << '_' << v->vertex_id << " | ";
+            }
+        }std::cout << std::endl;
         // Update the pheromone matrix
         _update_pheromone_trail();
         
@@ -54,7 +63,7 @@ void AntColonyOptimization::_create_pheromone_matrix() {
 
 }
 
-std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate> ant_colony) {
+std::vector<Candidate*> AntColonyOptimization::_ant_builder(std::vector<Candidate*> ant_colony) {
     // an ant must contain a full solution
     Candidate *new_ant;
     double iteration_best_cost = INT64_MAX;
@@ -63,15 +72,18 @@ std::vector<Candidate> AntColonyOptimization::_ant_builder(std::vector<Candidate
         new_ant->generate_candidate(this->pheromone_matrix);
         std::cout << "Candidate[" << i+1 << "] cost: RMB$ " << new_ant->get_candidate_cost() << std::endl;
         std::vector<Vehicle*> all_vehicles = new_ant->get_all_vehicles();
+        
+        { // print results
         for (auto vehicle: all_vehicles) {
             std::cout << "Vehicle [" << vehicle->vehicle_id << "]: ";
             for (auto vertex: vehicle->vehicle_path) {
                 std::cout << '[' << vertex.vertex_type << '_' << vertex.vertex_id << "] -> ";
             }
             std::cout << std::endl;
-        }
-        std::cout << "----------------------" << std::endl;
-        ant_colony.push_back(*new_ant);
+        }std::cout << "----------------------" << std::endl;}
+
+
+        ant_colony.push_back(new_ant);
         double current_ant_cost = new_ant->get_candidate_cost();
         if  (current_ant_cost < iteration_best_cost) {
             iteration_best_cost = current_ant_cost;
