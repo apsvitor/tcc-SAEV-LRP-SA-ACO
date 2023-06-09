@@ -56,7 +56,7 @@ Vertex* Candidate::__choose_next_edge(
     // given a vehicle's current vertex determine all its neighbors
     std::vector<Vertex*> adj_list = current_v->adj_list;
     // cumulative sum to represent the weights of the edges
-    int index=0;    
+    int index=0;
     std::vector<pdi> cumulative_sum;
     pci id_i = pci(current_v->vertex_type, current_v->vertex_id);
 
@@ -88,6 +88,17 @@ Vertex* Candidate::__choose_next_edge(
     }
     
     // std::cout << "cum_sum_size: " << cumulative_sum.size() << "  remaining requests: " << this->remaining_requests << std::endl;
+    if (cumulative_sum.size() == 0){
+        for (auto v: this->vertices_list) {
+            if  (v->vertex_type == 'r') {
+                std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+            }
+            else{
+                std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+            }
+        }std::cout << std::endl;
+        throw std::invalid_argument("cumulative vector is empty");
+    }
 
     // finds out which edge will be randomly chosen according to its interval
     double max_sum = (cumulative_sum[cumulative_sum.size()-1].first) / (sum_components_value);
@@ -120,9 +131,26 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
             static_cast<Station*>(next_v)->is_used += 1;
         }
         else { // is a request
+            // std::cout << "next_v: r_" << next_v->vertex_id << std::endl;
+            // std::cout << "Antes Rrq: " << this->remaining_requests << " | all_vertices: ";
+            // for (auto teste: this->vertices_list){
+            //     if  (teste->vertex_type == 'r')
+            //         std::cout << "[r_" << teste->vertex_id << ", " << static_cast<Request*>(teste)->is_done << "] | ";
+            //     else{
+            //         std::cout << "[s_" << teste->vertex_id << ", " << static_cast<Station*>(teste)->is_used << "] | ";
+            //     }
+            // }std::cout << std::endl;
             static_cast<Request*>(next_v)->is_done = true;
             this->remaining_requests--;
             car_pointer->update_vehicle_request(next_v);
+            // std::cout << "Depois Rrq: " << this->remaining_requests << " | all_vertices: ";
+            // for (auto teste: this->vertices_list){
+            //     if  (teste->vertex_type == 'r')
+            //         std::cout << "[r_" << teste->vertex_id << ", " << static_cast<Request*>(teste)->is_done << "] | ";
+            //     else{
+            //         std::cout << "[s_" << teste->vertex_id << ", " << static_cast<Station*>(teste)->is_used << "] | ";
+            //     }
+            // }std::cout << std::endl;
         }
         car_pointer->current_vertex = next_v;
         car_pointer->add_vertex_to_vehicle_path(*next_v);
@@ -162,7 +190,7 @@ void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
     int v_index=0;
     Vehicle *car_pointer;
     this->remaining_requests = this->r_ind.size();
-    for (auto v: this->vertices_list) {
+    for (auto &v: this->vertices_list) {
         if  (v->vertex_type == 'r')
             static_cast<Request*>(v)->is_done = false;
         else
@@ -171,7 +199,7 @@ void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
     
     // Concludes candidate generation whenever the minimum threshold is met.
     while(this->remaining_requests != this->ignored_requests) {
-        // std::cout << "Remaining Requests: " << this->remaining_requests << std::endl; 
+        std::cout << "Remaining Requests: " << this->remaining_requests << std::endl; 
         // acquire a vehicle
         car_pointer = __generate_new_vehicle(v_index++);
         // std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << std::endl;
@@ -210,7 +238,6 @@ double Candidate::__calculate_candidate_cost() {
         }
         trip_cost += num_trips * request_c::COST_PER_TRIP;
     }
-
     if  (this->ignored_requests)
         penalty_cost = this->ignored_requests * request_c::UNSERVED_PENALTY;
 
@@ -230,10 +257,14 @@ void Candidate::change_vehicle(int index, Vehicle *new_vehicle, int new_cost){
     this->candidate_cost = new_cost;
 }
 
-void Candidate::undo_requests(int undo_count){
-    this->remaining_requests += undo_count;
+void Candidate::set_remaining_requests(int new_value){
+    this->remaining_requests = new_value;
 }
 
 int Candidate::get_remaining_requests(){
     return this->remaining_requests;
+}
+
+int Candidate::get_ignored_requests(){
+    return this->ignored_requests;
 }

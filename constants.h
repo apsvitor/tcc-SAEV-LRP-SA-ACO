@@ -5,8 +5,8 @@ namespace sa_c{
     const double    COOLING_FACTOR              = 0.95;
     const double    NEIGHBOR_REDUCTION_FACTOR   = 0.0005;
     const double    MIN_T                       = 1.0;
-    const int       MAX_ITERATIONS              = 50;
-    const int       MAX_NEIGHBORS_ITERATIONS    = 50;
+    const int       MAX_ITERATIONS              = 5;
+    const int       MAX_NEIGHBORS_ITERATIONS    = 5;
 }
 
 
@@ -16,8 +16,8 @@ namespace aco_c{
     const double    BETA            = 0.5;
     const double    RO              = 0.1;
     const double    BASE_PHEROMONE  = 0.5;
-    const int       MAX_ANTS        = 10;
-    const int       MAX_ITERATIONS  = 10;
+    const int       MAX_ANTS        = 100;
+    const int       MAX_ITERATIONS  = 100;
 }
 
 

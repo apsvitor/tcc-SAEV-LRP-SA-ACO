@@ -2,9 +2,9 @@
 
 class Point {
 public:
-    int     x;
-    int     y;
+    double     x;
+    double     y;
     Point   ();
-    Point   (int x, int y);
+    Point   (double x, double y);
     double  get_distance(Point &b);
 };

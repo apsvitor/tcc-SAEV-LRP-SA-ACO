@@ -11,8 +11,6 @@ AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list)
 }
 
 void AntColonyOptimization::run() {
-    
-    
     for (int iter = 0; iter < aco_c::MAX_ITERATIONS; iter++) {
         std::cout << "=========== ITER = " << iter << "===========" << std::endl;
         std::vector<Candidate*> ant_colony;
@@ -20,8 +18,8 @@ void AntColonyOptimization::run() {
         // Local search (Simulated Annealing)
         SimulatedAnnealingOptimization sa_opt;
         std::cout << "Cost before SA: " << this->iteration_best->get_candidate_cost() << std::endl;
-        sa_opt.run(this->iteration_best, this->pheromone_matrix);
-        std::cout << "Cost after SA: " << this->iteration_best->get_candidate_cost() << std::endl;
+        // sa_opt.run(this->iteration_best, this->pheromone_matrix);
+        // std::cout << "Cost after SA: " << this->iteration_best->get_candidate_cost() << std::endl;
         for (auto v: this->vertices_list){
             if  (v->vertex_type == 'r' && static_cast<Request*>(v)->is_done){
                 std::cout << v->vertex_type << '_' << v->vertex_id << " | ";

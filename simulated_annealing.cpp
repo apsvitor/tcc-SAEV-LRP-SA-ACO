@@ -8,65 +8,144 @@ SimulatedAnnealingOptimization::SimulatedAnnealingOptimization() {
 void SimulatedAnnealingOptimization::__disturb_candidate(
         Candidate *ant,
         std::map <pkey, float> &pheromone_matrix) {
-    // disturb a candidate
     /*
     disturbance method:
         randomly chooses a vehicle within the candidate
         get all requests which aren't done + the vehicle's request
         rebuilds the vehicle's path
     */
-    //std::cout << "Remaining requests antes do SA: " << ant->get_remaining_requests() << std::endl;
+    
     std::vector<Vehicle*> all_vehicles = ant->get_all_vehicles();
     int replace_index = random_gen::random_int(0, int(all_vehicles.size())-1);
 
     int num_stations = 0;
+    std::vector<int> original_station_uses;
     for (auto v: ant->vertices_list){
-        if (v->vertex_type == 's')
+        if (v->vertex_type == 's'){
             num_stations++;
-    }
-
-    // find the requests answered by the original vehicle and set them to unanswered
-    int requests_done = 0;
-    std::vector<int> disturbed_requests_index;
-    for (auto &vertex: all_vehicles[replace_index]->vehicle_path){
-        if  (vertex.vertex_type == 'r'){
-            int request_id = vertex.vertex_id;
-            static_cast<Request*>(ant->vertices_list[request_id+num_stations])->is_done = false;
-            disturbed_requests_index.push_back(request_id+num_stations);
-            requests_done++;
+            original_station_uses.push_back(static_cast<Station*>(v)->is_used);
         }
     }
 
-    // std::cout << "requests alteradas: ";
-    // for (auto ind: disturbed_requests_index){
-    //     std::cout << ant->vertices_list[ind]->vertex_id << " | ";
-    // }std::cout << std::endl;
+    {// checkpoint 1    
+        std::cout << "CHECK POINT 1\n";
+        for (auto v: ant->vertices_list) {
+            if  (v->vertex_type == 'r') {
+                std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+            }
+            else{
+                std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+            }
+        }std::cout << std::endl;
+    }
+    // find the requests answered by the original vehicle and set them to unanswered
+    int requests_done = 0;
+    std::vector<int> disturbed_requests_index;
+    int disturbed_stations[num_stations] = {0};
+    std::cout << "Chosen vehicle path: " << replace_index << " -> ";
+    for (auto &vertex: all_vehicles[replace_index]->vehicle_path){
+        int vertex_id = vertex.vertex_id;
+        std::cout << "[" << vertex.vertex_type << ", " << vertex_id << "] | ";
+        if  (vertex.vertex_type == 'r'){
+            static_cast<Request*>(ant->vertices_list[vertex_id+num_stations])->is_done = false;
+            disturbed_requests_index.push_back(vertex_id+num_stations);
+            requests_done++;
+        }
+        else {
+            disturbed_stations[vertex_id] += 1;
+            static_cast<Station*>(ant->vertices_list[vertex_id])->is_used -= 1;
+        }
+    }
+    {// checkpoint 2
+        std::cout << "\nCHECKPOINT 2" << std::endl;
+        for (auto v: ant->vertices_list) {
+            if  (v->vertex_type == 'r') {
+                std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+            }
+            else{
+                std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+            }
+        }std::cout << std::endl;
+    }
 
-    ant->undo_requests(requests_done);
+    int original_rrq = ant->get_remaining_requests();
+    ant->set_remaining_requests(original_rrq + requests_done);
+
+    std::cout << "Requests que podem ser recolocadas: " << requests_done + original_rrq << std::endl;
 
     int new_vehicle_id = all_vehicles[replace_index]->vehicle_id;
+    
     Vehicle *new_vehicle = ant->__generate_new_vehicle(new_vehicle_id);
     ant->__path_builder(pheromone_matrix, new_vehicle);
+
     this->best_cost = ant->get_candidate_cost();
     double new_cost = ant->__calculate_candidate_cost(),
            acceptance_probability = random_gen::random_float(0.0, 1.0),
            calculated_probability = __probability_of_accepting(new_cost);
-            
+
+
+    {// checkpoint 3
+        std::cout << "\nCHECKPOINT 3" << std::endl;
+        for (auto v: ant->vertices_list) {
+            if  (v->vertex_type == 'r') {
+                std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+            }
+            else{
+                std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+            }
+        }std::cout << std::endl;
+    }
+
     if  (calculated_probability >= acceptance_probability){
+        {// checkpoint 4
+            std::cout << "\nCHECKPOINT 4" << std::endl;
+            for (auto v: ant->vertices_list) {
+                if  (v->vertex_type == 'r') {
+                    std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+                }
+                else{
+                    std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+                }
+            }std::cout << std::endl;
+        }
         // std::cout << "-> -> -> Vehicle Replaced id: "<< new_vehicle_id << " <- <- <-" << std::endl;
         ant->change_vehicle(replace_index, new_vehicle, new_cost);
         this->best_cost = new_cost;
     }
     else {
-        // just set the vertices_list requests to their original 'done' state
-        // std::cout << "requests resetadas: ";
+        {// checkpoint 5 
+            std::cout << "\nCHECKPOINT 5" << std::endl;
+            for (auto v: ant->vertices_list) {
+                if  (v->vertex_type == 'r') {
+                    std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+                }
+                else{
+                    std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+                }
+            }std::cout << std::endl;
+        }
+        // just set the vertices to their original state
+        ant->set_remaining_requests(original_rrq);
         for (auto index: disturbed_requests_index){
-            // std::cout << ant->vertices_list[index]->vertex_id << " | ";
             static_cast<Request*>(ant->vertices_list[index])->is_done = true;
         }
-        // std::cout << std::endl;
+        int pos = 0;
+        for (auto value: disturbed_stations){
+            static_cast<Station*>(ant->vertices_list[pos])->is_used = original_station_uses[pos];
+            pos++;
+        }
+        {// checkpoint 6
+            std::cout << "\nCHECKPOINT 6" << std::endl;
+            for (auto v: ant->vertices_list) {
+                if  (v->vertex_type == 'r') {
+                    std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+                }
+                else{
+                    std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+                }
+            }std::cout << std::endl;
+        }
     }
-    // std::cout << "Remaining requests depois do SA: " << ant->get_remaining_requests() << std::endl;
 }
 
 double SimulatedAnnealingOptimization::__probability_of_accepting(double new_cost) {
@@ -87,6 +166,15 @@ void SimulatedAnnealingOptimization::run(
         // for each temperature level explore the neighbors
         for (int i=0; i<neighbors_search_space; i++) {
             // disturb a candidate
+            // for (auto v: ant->vertices_list) {
+            //     if  (v->vertex_type == 'r') {
+            //         std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+            //     }
+            //     else{
+            //         std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+            //     }
+            // }std::cout << std::endl;
+            std::cout << "====================> DISTURBANCE CALLED\n";
             __disturb_candidate(ant, pheromone_matrix);
         }
 
