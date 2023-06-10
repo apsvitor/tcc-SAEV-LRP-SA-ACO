@@ -10,13 +10,15 @@ private:
     void        __disturb_candidate(
             Candidate *ant,
             std::map <pkey, float> &pheromone_matrix);
+
+    bool        __alter_candidate(Candidate *ant);
     
     double      __probability_of_accepting(double new_cost);
 
 
 public:
     SimulatedAnnealingOptimization();
-    void run(Candidate *ant, std::map <pkey, float> &pheromone_matrix);
+    void run(Candidate *ant);
 };
 
 /*

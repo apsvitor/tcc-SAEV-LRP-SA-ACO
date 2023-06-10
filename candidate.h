@@ -49,5 +49,7 @@ public:
     int get_remaining_requests();
     void set_remaining_requests(int new_value);
     void change_vehicle(int index, Vehicle *new_vehicle, int new_cost);
+
+    bool validate_path(std::vector<Vertex> path);
     
 };

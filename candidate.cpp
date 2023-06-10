@@ -199,7 +199,6 @@ void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
     
     // Concludes candidate generation whenever the minimum threshold is met.
     while(this->remaining_requests != this->ignored_requests) {
-        std::cout << "Remaining Requests: " << this->remaining_requests << std::endl; 
         // acquire a vehicle
         car_pointer = __generate_new_vehicle(v_index++);
         // std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << std::endl;
@@ -267,4 +266,108 @@ int Candidate::get_remaining_requests(){
 
 int Candidate::get_ignored_requests(){
     return this->ignored_requests;
+}
+
+bool Candidate::validate_path(std::vector<Vertex> path) {
+    // simulates a situation given a full path
+    // vehicle starts at path[0], time=0, battery=100%
+    int time_of_vehicle = 0;
+    double battery      = vehicle_c::MAX_BATTERY;
+
+    bool    is_on_time = true, 
+            has_energy = true;
+    for (int i=0; i<path.size()-1; i++) {
+        // move type: station -> request
+        if  (path[i].vertex_type == 's' && path[i+1].vertex_id == 'r') {
+            // the vehicle IS RECHARGING
+            double distance_to_origin   = path[i].p_xy.get_distance(path[i+1].p_xy);
+            double distance_of_request  = static_cast<Request*>(&(path[i+1]))->request_distance;
+
+            int request_starting_time   = static_cast<Request*>(&(path[i+1]))->pickup_time;
+            int time_to_finish_request  = std::ceil(distance_of_request/vehicle_c::MEAN_VELOCITY);
+            int time_to_reach_origin    = std::ceil(distance_to_origin/vehicle_c::MEAN_VELOCITY);
+            int total_time_cost         = time_of_vehicle + time_to_reach_origin;
+
+            double total_energy_cost    = (distance_to_origin + distance_of_request) * vehicle_c::CONSUMPTION_RATE;
+            double missing_energy       = vehicle_c::MAX_BATTERY - battery;
+
+            // if the problem allows partial recharge
+            if  (problem_type::IS_PARTIAL_RECHARGE) {
+                // calculate the minimum energy required to complete the request
+                double  min_energy      = vehicle_c::MIN_BATTERY_LEVEL * vehicle_c::MAX_BATTERY,
+                        request_energy  = (distance_to_origin + distance_of_request) * vehicle_c::CONSUMPTION_RATE,
+                        min_recharge    = min_energy + request_energy - battery;
+
+                // calculate the time necessary to get that minimum charge
+                if  (min_recharge > 0) {
+                    int min_recharge_time   = std::ceil(min_recharge / vehicle_c::CHARGING_RATE);
+                    total_time_cost         += min_recharge_time;
+
+                    // check if its possible to charge more
+                    int max_charging_time   = request_starting_time - (time_of_vehicle + time_to_reach_origin);
+                    double max_recharge     = std::min(max_charging_time*vehicle_c::CHARGING_RATE, missing_energy);
+                    int time_spent_charging = std::ceil(max_recharge / vehicle_c::CHARGING_RATE);
+
+                    total_time_cost += std::max(time_spent_charging, min_recharge_time);
+                    battery         += std::max(max_recharge, min_recharge);
+                }
+            }
+            // the problem demands full recharge
+            else {
+                double missing_battery = vehicle_c::MAX_BATTERY - battery;
+                int time_to_fully_charge = missing_battery / vehicle_c::CHARGING_RATE;
+                battery = vehicle_c::MAX_BATTERY;
+
+                // time to fully recharge
+                total_time_cost = std::max(total_time_cost + time_to_fully_charge, request_starting_time);
+            }
+            // time feasibility
+            if  (total_time_cost > request_starting_time + request_c::LATENESS_EPS)
+                return false;
+
+            // energy feasibility is just a check since it passed the time check with min_recharge
+            if  (battery - total_energy_cost < vehicle_c::MIN_BATTERY_LEVEL * vehicle_c::MAX_BATTERY)
+                return false;
+            // update the vehicle simulation
+            time_of_vehicle = total_time_cost;
+            battery -= total_energy_cost;
+        }
+        // move type: request -> request
+        else if (path[i].vertex_type == 'r' && path[i+1].vertex_type == 'r') {
+            int starting_time = static_cast<Request*>(&(path[i+1]))->pickup_time;
+            double distance_of_request = static_cast<Request*>(&(path[i+1]))->request_distance;
+            double distance_to_origin = path[i].p_xy.get_distance(path[i+1].p_xy);
+            int time_to_reach_origin = std::ceil(distance_to_origin / vehicle_c::MEAN_VELOCITY);
+            int time_to_finish_request = std::ceil(distance_of_request / vehicle_c::MEAN_VELOCITY);
+
+            // time feasibility
+            if  (time_to_reach_origin + time_of_vehicle > starting_time + request_c::LATENESS_EPS)
+                return false;
+            
+            // energy feasibility
+            double energy_cost = (distance_to_origin + distance_of_request) * vehicle_c::CONSUMPTION_RATE;
+            if  (battery - energy_cost < vehicle_c::MIN_BATTERY_LEVEL * vehicle_c::MAX_BATTERY)
+                return false;
+
+            // updates the vehicle simulation
+            time_of_vehicle = std::max(starting_time, time_to_reach_origin + time_of_vehicle) + time_to_finish_request;
+            battery -= energy_cost;
+        }
+        // move type: request -> station
+        else if (path[i].vertex_type == 'r' && path[i+1].vertex_type == 's') {
+            // doesn't require time feasibility check
+            double distance_to_station = path[i].p_xy.get_distance(path[i+1].p_xy);
+            double energy_cost = distance_to_station * vehicle_c::CONSUMPTION_RATE;
+            int time_to_reach_station = std::ceil(distance_to_station / vehicle_c::MEAN_VELOCITY);
+
+            // energy feasibility
+            if  (battery - energy_cost < vehicle_c::MIN_BATTERY_LEVEL * vehicle_c::MAX_BATTERY)
+                return false;
+            
+            // updates the vehicle simulation
+            time_of_vehicle += time_to_reach_station;
+            battery -= energy_cost;
+        }
+    }
+    return (is_on_time & has_energy);
 }

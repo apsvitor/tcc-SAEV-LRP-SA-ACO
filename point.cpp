@@ -9,4 +9,5 @@ Point::Point(double x, double y) {
 }
 
 double Point::get_distance(Point &b) {
-        return sqrt((this->x - b.x)*(this->x - b.x) + (this->y - b.y)*(this->y - b.y));}
+        return sqrt((this->x - b.x)*(this->x - b.x) + (this->y - b.y)*(this->y - b.y)) / 10.0;
+}

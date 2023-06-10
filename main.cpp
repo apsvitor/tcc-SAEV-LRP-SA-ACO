@@ -4,6 +4,8 @@
 
 int main() {
     // std::ifstream inp("entrada.txt");
+    // std::ifstream inp("./tests/S2_A6_T2.txt");
+    // std::ifstream inp("./tests/S2_A10_T1.txt");
     std::ifstream inp("./tests/S2_A6_T2.txt");
 
     int num_stations, num_requests;

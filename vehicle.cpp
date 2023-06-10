@@ -56,7 +56,8 @@ bool Vehicle::is_time_feasible(Vertex* next_v) {
         double vehicle_energy   = this->current_battery,
                min_energy       = vehicle_c::MIN_BATTERY_LEVEL * vehicle_c::MAX_BATTERY,
                request_energy   = total_distance * vehicle_c::CONSUMPTION_RATE,
-               min_recharge     = (min_energy + request_energy) - vehicle_energy;
+               min_recharge     = (min_energy + request_energy) - vehicle_energy,
+               energy_missing = vehicle_c::MAX_BATTERY - this->current_battery;
         
         int vehicle_time        = this->time_of_vehicle,
             reach_origin_time   = std::ceil(distance_to_origin / vehicle_c::MEAN_VELOCITY),
@@ -68,19 +69,27 @@ bool Vehicle::is_time_feasible(Vertex* next_v) {
             int min_recharge_time   = std::ceil(min_recharge / vehicle_c::CHARGING_RATE),
                 request_start_time  = vehicle_time + reach_origin_time + min_recharge_time;
             // o tempo para recarregar o minimo está no intervalo de atraso permitido
-            if  (request_start_time >= pickup_time && 
-                 request_start_time + request_c::LATENESS_EPS <= pickup_time){
+            if  (request_start_time <= pickup_time + request_c::LATENESS_EPS) {
+            // if  (request_start_time >= pickup_time && request_start_time + request_c::LATENESS_EPS <= pickup_time){
                 // its possible to partially recharge
-                this->current_battery += min_recharge;
-                this->time_of_vehicle = request_start_time;
-                this->is_recharging = false;
+                // maximum charge without lateness tolerance
+                int max_charging_time   = pickup_time - (vehicle_time + reach_origin_time);
+                double max_recharge     = std::min(max_charging_time * vehicle_c::CHARGING_RATE, energy_missing);
+                int time_spent_charging = std::ceil(max_recharge / vehicle_c::CHARGING_RATE);
+
+                this->current_battery   +=  std::max(max_recharge, min_recharge);
+                this->time_of_vehicle   =   time_of_vehicle + std::max(time_spent_charging, min_recharge_time);
+
+                // this->current_battery   += min_recharge;
+                // this->time_of_vehicle   = request_start_time;
+                this->is_recharging     =   false;
                 return true;
             }
             return false;
         }
         else if (!problem_type::IS_PARTIAL_RECHARGE) {
             // full recharge
-            double energy_missing = vehicle_c::MAX_BATTERY - this->current_battery;
+            
             int time_to_recharge = std::ceil(energy_missing / vehicle_c::CHARGING_RATE);
 
             this->time_of_vehicle += time_to_recharge;
