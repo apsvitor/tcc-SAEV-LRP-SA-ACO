@@ -39,7 +39,7 @@ namespace station_c {
 namespace request_c {
     const double    COST_PER_TRIP       = 19.73;    // $RMB
     const int       LATENESS_EPS        = 5;        // acceptable lateness (min)
-    const double    MIN_REQUESTS_DONE   = 1.0;     // %
+    const double    MIN_REQUESTS_DONE   = 0.70;     // %
     const double    UNSERVED_PENALTY    = 19.73;    // $RMB
 }
 

@@ -341,6 +341,9 @@ bool Candidate::validate_path(std::vector<Vertex> path) {
             time_of_vehicle += time_to_reach_station;
             battery -= energy_cost;
         }
+        else if (path[i].vertex_type == 's' && path[i+1].vertex_type == 's') {
+            return false;
+        }
     }
     return (is_on_time & has_energy);
 }

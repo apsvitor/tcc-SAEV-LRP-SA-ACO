@@ -52,8 +52,6 @@ void AntColonyOptimization::_create_pheromone_matrix() {
             }
         }
     }
-    std::cout << "matrix_size: " << this->pheromone_matrix.size() << std::endl;
-
 }
 
 std::vector<Candidate*> AntColonyOptimization::_ant_builder(std::vector<Candidate*> ant_colony) {
@@ -74,8 +72,9 @@ std::vector<Candidate*> AntColonyOptimization::_ant_builder(std::vector<Candidat
                 this->global_best = new_ant;
             }
         }
+        else
+            delete new_ant;
     }
-    delete new_ant;
     return ant_colony;
 }
 
@@ -93,12 +92,14 @@ void AntColonyOptimization::_update_pheromone_trail(){
 
         for (auto &vehicle: all_vehicles) {
             std::vector<Vertex> full_path = vehicle->vehicle_path;
-
+            // std::cout << "vehicle[" << vehicle->vehicle_id << "]: ";
             for (int i=0; i<full_path.size()-1; i++) {
+                // std::cout << '[' << full_path[i].vertex_type << '_'<<full_path[i].vertex_id << "] -> ";
                 pci id_i = pci(full_path[i].vertex_type, full_path[i].vertex_id);
                 pci id_j = pci(full_path[i+1].vertex_type, full_path[i+1].vertex_id);
                 this->pheromone_matrix[pkey(id_i, id_j)] += candidate_quality;
             }
+            // std::cout << std::endl;
         }
         ant = this->iteration_best;
     }

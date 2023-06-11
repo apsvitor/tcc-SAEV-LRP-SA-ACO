@@ -15,30 +15,6 @@ void Vehicle::add_vertex_to_vehicle_path(Vertex new_edge) {
     this->vehicle_path.push_back(new_edge);
 }
 
-// double Vehicle::__calculate_time_of_recharge() {
-//     return (vehicle_c::MAX_BATTERY - this->current_battery) / vehicle_c::CHARGING_RATE;
-// }
-
-// double Vehicle::__calculate_distance_of_trip(Vertex *next_v) {
-//     double total_distance = this->current_vertex->p_xy.get_distance(next_v->p_xy);
-//     // if  (next_v->vertex_type == 'r')
-//         // total_distance += static_cast<Request*>(next_v)->request_distance;
-//     return total_distance;
-// }
-
-// double Vehicle::__calculate_distance_of_request(Vertex *next_v) {
-//     return static_cast<Request*>(next_v)->request_distance;
-// }
-
-// int Vehicle::__calculate_time_of_trip(Vertex* next_v) {
-//     double total_distance = __calculate_distance_of_trip(next_v);
-//     return std::ceil(total_distance / vehicle_c::MEAN_VELOCITY);
-// }
-
-// double Vehicle::__calculate_energy_of_trip(Vertex *next_v) {
-//     double total_distance = __calculate_distance_of_trip(next_v);
-//     return total_distance * vehicle_c::CONSUMPTION_RATE;
-// }
 
 bool Vehicle::is_time_feasible(Vertex* next_v) {
     // can the vehicle reach the origin on time? ----------------------------------------
@@ -96,6 +72,7 @@ bool Vehicle::is_time_feasible(Vertex* next_v) {
             this->current_battery += energy_missing;
             this->is_recharging = false;
         }
+
         if  (this->time_of_vehicle + reach_origin_time <= pickup_time + request_c::LATENESS_EPS) {
             this->is_recharging = false;
             return true;
@@ -109,15 +86,6 @@ bool Vehicle::is_time_feasible(Vertex* next_v) {
          static_cast<Request*>(next_v)->pickup_time + request_c::LATENESS_EPS)
         return true;
     return false;
-    // TEST END -------------------------------------------------------------------------
-    
-    // if  (next_v->vertex_type == 's')
-    //     return true;
-    // int trip_time_cost = __calculate_time_of_trip(next_v);
-    // if  (this->time_of_vehicle + trip_time_cost <= 
-    //     static_cast<Request*>(next_v)->pickup_time + request_c::LATENESS_EPS)
-    //     return true;
-    // return false;
 }
 
 bool Vehicle::is_energy_feasible(Vertex *next_v) {
@@ -130,25 +98,7 @@ bool Vehicle::is_energy_feasible(Vertex *next_v) {
     if  (this->current_battery - total_energy_cost >= min_energy_before_recharge)
         return true;
     return false;
-    // TEST END -------------------------------------------------------------------------
-    
-    // double trip_energy_cost = __calculate_energy_of_trip(next_v);
-    // double min_energy_before_recharge = vehicle_c::MIN_BATTERY_LEVEL * vehicle_c::MAX_BATTERY;
-    // if  (this->current_battery - trip_energy_cost >= min_energy_before_recharge)
-    //     return true;
-    // return false;
 }
-
-// void Vehicle::update_vehicle_recharge(Vertex *next_v) {
-//     double energy_cost          = __calculate_energy_of_trip(next_v);
-//     this->current_battery       -= energy_cost;
-//     double trip_time_cost       = __calculate_time_of_trip(next_v);
-//     double recharge_time_cost   = __calculate_time_of_recharge();
-    
-//     // for now it's 100%. Adapt to flexible percentage later.
-//     this->current_battery = vehicle_c::MAX_BATTERY;
-//     this->time_of_vehicle += trip_time_cost + recharge_time_cost;
-// }
 
 void Vehicle::update_vehicle_request(Vertex *next_v) {
     // updates vehicle state after it answers a request ---------------------------------
