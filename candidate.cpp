@@ -17,6 +17,12 @@ Candidate::Candidate(
     this->ignored_requests = std::floor(this->remaining_requests * (1.0 - request_c::MIN_REQUESTS_DONE));
 }
 
+Candidate::~Candidate() {
+    for (int i=0; i<this->all_vehicles.size();i++){
+        delete this->all_vehicles[i];
+    }
+}
+
 int Candidate::__station_randomizer() {
     // returns the index for the station in the vertices list
     int num_stations = this->s_ind.size();
@@ -86,17 +92,8 @@ Vertex* Candidate::__choose_next_edge(
         }
         index++;
     }
-    
-    // std::cout << "cum_sum_size: " << cumulative_sum.size() << "  remaining requests: " << this->remaining_requests << std::endl;
+
     if (cumulative_sum.size() == 0){
-        for (auto v: this->vertices_list) {
-            if  (v->vertex_type == 'r') {
-                std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
-            }
-            else{
-                std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
-            }
-        }std::cout << std::endl;
         throw std::invalid_argument("cumulative vector is empty");
     }
 
@@ -118,39 +115,22 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     Vertex* current_v = car_pointer->current_vertex;
     // make a move
     Vertex* next_v = __choose_next_edge(pheromone_matrix, current_v);
-    // std::cout << "Current: " << current_v->vertex_type << '_' << current_v->vertex_id 
-    //           << " | Chosen: " << next_v->vertex_type << '_' << next_v->vertex_id << std::endl;
+    //std::cout << "vehicle_id " << car_pointer->vehicle_id << " chosen_vertex: " << next_v->vertex_type << '_' << next_v->vertex_id << std::endl;
+
+
     // is it possible?
     bool is_on_time = car_pointer->is_time_feasible(next_v);
     bool has_energy = car_pointer->is_energy_feasible(next_v);
 
     if  (is_on_time && has_energy) {
-        // std::cout << "Movement succesfully done!" << std::endl;
         if  (next_v->vertex_type == 's') {
             car_pointer->update_vehicle_request(next_v);
             static_cast<Station*>(next_v)->is_used += 1;
         }
         else { // is a request
-            // std::cout << "next_v: r_" << next_v->vertex_id << std::endl;
-            // std::cout << "Antes Rrq: " << this->remaining_requests << " | all_vertices: ";
-            // for (auto teste: this->vertices_list){
-            //     if  (teste->vertex_type == 'r')
-            //         std::cout << "[r_" << teste->vertex_id << ", " << static_cast<Request*>(teste)->is_done << "] | ";
-            //     else{
-            //         std::cout << "[s_" << teste->vertex_id << ", " << static_cast<Station*>(teste)->is_used << "] | ";
-            //     }
-            // }std::cout << std::endl;
             static_cast<Request*>(next_v)->is_done = true;
             this->remaining_requests--;
             car_pointer->update_vehicle_request(next_v);
-            // std::cout << "Depois Rrq: " << this->remaining_requests << " | all_vertices: ";
-            // for (auto teste: this->vertices_list){
-            //     if  (teste->vertex_type == 'r')
-            //         std::cout << "[r_" << teste->vertex_id << ", " << static_cast<Request*>(teste)->is_done << "] | ";
-            //     else{
-            //         std::cout << "[s_" << teste->vertex_id << ", " << static_cast<Station*>(teste)->is_used << "] | ";
-            //     }
-            // }std::cout << std::endl;
         }
         car_pointer->current_vertex = next_v;
         car_pointer->add_vertex_to_vehicle_path(*next_v);
@@ -158,7 +138,6 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
             __path_builder(pheromone_matrix, car_pointer);
         }
         else if (car_pointer->current_vertex->vertex_type == 'r') {
-            // std::cout << "No more requests to do. Path-finding to a station." << std::endl;
             Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
             car_pointer->add_vertex_to_vehicle_path(*final_vertex);
             car_pointer->current_vertex = final_vertex;
@@ -167,7 +146,6 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     }
     // if the vehicle cant complete the next_v task there are 2 scenarios:
     else if (car_pointer->current_vertex->vertex_type == 's') {
-        // std::cout << "Already at a station. Ceases all activity." << std::endl;
         // In this case the vehicle is considered to have exhausted its uses.
         // Just return the path that was already built.
         static_cast<Station*>(current_v)->free_spaces += 1;
@@ -175,9 +153,6 @@ void Candidate::__path_builder(std::map<pkey, float> &pheromone_matrix,
     else if (car_pointer->current_vertex->vertex_type == 'r') {
         // In this case the vehicle must find a station to port.
         Vertex *final_vertex = __find_a_station_to_stop(car_pointer);
-        // std::cout << "At request r_" << car_pointer->current_vertex->vertex_id << ", tried to go to "
-        //           << next_v->vertex_type << '_' << next_v->vertex_id << " but couldn't. So it will go to s_"
-        //           << final_vertex->vertex_id << " instead." << std::endl;
         car_pointer->add_vertex_to_vehicle_path(*final_vertex);
         car_pointer->current_vertex = final_vertex;
         static_cast<Station*>(car_pointer->current_vertex)->is_used += 1;
@@ -196,12 +171,10 @@ void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
         else
             static_cast<Station*>(v)->is_used = 0;
     }
-    
     // Concludes candidate generation whenever the minimum threshold is met.
     while(this->remaining_requests != this->ignored_requests) {
         // acquire a vehicle
         car_pointer = __generate_new_vehicle(v_index++);
-        // std::cout << "Vehicle " << car_pointer->vehicle_id << " acquired. Starting at s_" << car_pointer->current_vertex->vertex_id << std::endl;
         // build the path for the vehicle
         __path_builder(pheromone_matrix, car_pointer);
         // add vehicle to the solution

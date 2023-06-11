@@ -26,6 +26,6 @@ private:
 
 public:
     AntColonyOptimization(std::vector<Vertex*> vertices_list);
-
+    double get_best_candidate_cost();
     void run();
 };

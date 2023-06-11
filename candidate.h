@@ -41,6 +41,7 @@ public:
             std::vector<int>        s_ind,
             std::vector<int>        r_ind
     );
+    ~Candidate();
     void generate_candidate(std::map <pkey, float> &pheromone_matrix);
 
     std::vector<Vehicle*> get_all_vehicles();

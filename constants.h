@@ -12,12 +12,12 @@ namespace sa_c{
 
 // ANT COLONY OPTIMIZATION PARAMETERS
 namespace aco_c{
-    const double    ALPHA           = 0.5;
-    const double    BETA            = 0.5;
+    const double    ALPHA           = 2.0;
+    const double    BETA            = 2.0;
     const double    RO              = 0.1;
     const double    BASE_PHEROMONE  = 0.5;
-    const int       MAX_ANTS        = 20;
-    const int       MAX_ITERATIONS  = 100;
+    const int       MAX_ANTS        = 300;
+    const int       MAX_ITERATIONS  = 300;
 }
 
 
@@ -39,7 +39,7 @@ namespace station_c {
 namespace request_c {
     const double    COST_PER_TRIP       = 19.73;    // $RMB
     const int       LATENESS_EPS        = 5;        // acceptable lateness (min)
-    const double    MIN_REQUESTS_DONE   = 0.70;     // %
+    const double    MIN_REQUESTS_DONE   = 1.0;     // %
     const double    UNSERVED_PENALTY    = 19.73;    // $RMB
 }
 
@@ -53,7 +53,7 @@ namespace heuristic_info {
 }
 
 namespace problem_type {
-    const bool      IS_PARTIAL_RECHARGE = true;
+    const bool      IS_PARTIAL_RECHARGE = false;
 }
 
 // key pair for the pheromone matrix. Ex.: ('s', 1) -> Station 1

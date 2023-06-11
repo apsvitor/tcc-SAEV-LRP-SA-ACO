@@ -17,19 +17,13 @@ void AntColonyOptimization::run() {
         ant_colony = this->_ant_builder(ant_colony);
         // Local search (Simulated Annealing)
         SimulatedAnnealingOptimization sa_opt;
-        // std::cout << "Cost before SA: " << this->iteration_best->get_candidate_cost() << std::endl;
         sa_opt.run(this->iteration_best);
-        // std::cout << "Cost after SA: " << this->iteration_best->get_candidate_cost() << std::endl;
-        // for (auto v: this->vertices_list){
-        //     if  (v->vertex_type == 'r' && static_cast<Request*>(v)->is_done){
-        //         std::cout << v->vertex_type << '_' << v->vertex_id << " | ";
-        //     }
-        // }std::cout << std::endl;
         // Update the pheromone matrix
         _update_pheromone_trail();
         
+        // for (int j=0;j<ant_colony.)
     }
-    std::cout << "BEST GLOBAL FOUND: RMB$ " << this->global_best->get_candidate_cost() << std::endl;
+    // std::cout << "BEST GLOBAL FOUND: RMB$ " << this->global_best->get_candidate_cost() << std::endl;
 }
 
 void AntColonyOptimization::_create_pheromone_matrix() {
@@ -58,6 +52,7 @@ void AntColonyOptimization::_create_pheromone_matrix() {
             }
         }
     }
+    std::cout << "matrix_size: " << this->pheromone_matrix.size() << std::endl;
 
 }
 
@@ -68,30 +63,19 @@ std::vector<Candidate*> AntColonyOptimization::_ant_builder(std::vector<Candidat
     for (int i=0; i<aco_c::MAX_ANTS; i++) {
         new_ant = new Candidate(this->vertices_list, this->s_ind, this->r_ind);
         new_ant->generate_candidate(this->pheromone_matrix);
-        std::cout << "Candidate[" << i+1 << "] cost: RMB$ " << new_ant->get_candidate_cost() << std::endl;
         std::vector<Vehicle*> all_vehicles = new_ant->get_all_vehicles();
-        
-        // { // print results
-        // for (auto vehicle: all_vehicles) {
-        //     std::cout << "Vehicle [" << vehicle->vehicle_id << "]: ";
-        //     for (auto vertex: vehicle->vehicle_path) {
-        //         std::cout << '[' << vertex.vertex_type << '_' << vertex.vertex_id << "] -> ";
-        //     }
-        //     std::cout << std::endl;
-        // }std::cout << "----------------------" << std::endl;}
 
-
-        ant_colony.push_back(new_ant);
         double current_ant_cost = new_ant->get_candidate_cost();
         if  (current_ant_cost < iteration_best_cost) {
             iteration_best_cost = current_ant_cost;
             this->iteration_best = new_ant;
-        }
-        if  (current_ant_cost < this->global_best->get_candidate_cost()){
-            std::cout << "New Global Best Found: " << std::endl;
-            this->global_best = new_ant;
+            ant_colony.push_back(new_ant);
+            if  (current_ant_cost < this->global_best->get_candidate_cost()){
+                this->global_best = new_ant;
+            }
         }
     }
+    delete new_ant;
     return ant_colony;
 }
 
@@ -118,4 +102,8 @@ void AntColonyOptimization::_update_pheromone_trail(){
         }
         ant = this->iteration_best;
     }
+}
+
+double AntColonyOptimization::get_best_candidate_cost() {
+    return this->global_best->get_candidate_cost();
 }
