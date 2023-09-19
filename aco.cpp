@@ -12,12 +12,12 @@ AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list)
 
 void AntColonyOptimization::run() {
     for (int iter = 0; iter < aco_c::MAX_ITERATIONS; iter++) {
-        std::cout << "=========== ITER = " << iter << "===========" << std::endl;
+        std::cout << "=========== ITER = " << iter << " ===========" << std::endl;
         std::vector<Candidate*> ant_colony;
         ant_colony = this->_ant_builder(ant_colony);
         // Local search (Simulated Annealing)
-        SimulatedAnnealingOptimization sa_opt;
-        sa_opt.run(this->iteration_best);
+        // SimulatedAnnealingOptimization sa_opt;
+        // sa_opt.run(this->iteration_best);
         // Update the pheromone matrix
         _update_pheromone_trail();
         
@@ -59,10 +59,10 @@ std::vector<Candidate*> AntColonyOptimization::_ant_builder(std::vector<Candidat
     Candidate *new_ant;
     double iteration_best_cost = INT64_MAX;
     for (int i=0; i<aco_c::MAX_ANTS; i++) {
+        clock_t tStart = clock();
         new_ant = new Candidate(this->vertices_list, this->s_ind, this->r_ind);
         new_ant->generate_candidate(this->pheromone_matrix);
-        std::vector<Vehicle*> all_vehicles = new_ant->get_all_vehicles();
-
+        std::cout << "\tAnt [" << i << "]: " << (double)(clock() - tStart)/CLOCKS_PER_SEC << std::endl;
         double current_ant_cost = new_ant->get_candidate_cost();
         if  (current_ant_cost < iteration_best_cost) {
             iteration_best_cost = current_ant_cost;
@@ -91,15 +91,14 @@ void AntColonyOptimization::_update_pheromone_trail(){
         double candidate_quality = 1 / (ant->get_candidate_cost());
 
         for (auto &vehicle: all_vehicles) {
-            std::vector<Vertex> full_path = vehicle->vehicle_path;
-            // std::cout << "vehicle[" << vehicle->vehicle_id << "]: ";
+            std::vector<int> full_path = vehicle->vehicle_path;
             for (int i=0; i<full_path.size()-1; i++) {
-                // std::cout << '[' << full_path[i].vertex_type << '_'<<full_path[i].vertex_id << "] -> ";
-                pci id_i = pci(full_path[i].vertex_type, full_path[i].vertex_id);
-                pci id_j = pci(full_path[i+1].vertex_type, full_path[i+1].vertex_id);
+                pci id_i = pci(this->vertices_list[full_path[i]]->vertex_type,
+                               this->vertices_list[full_path[i]]->vertex_id);
+                pci id_j = pci(this->vertices_list[full_path[i+1]]->vertex_type,
+                               this->vertices_list[full_path[i+1]]->vertex_id);
                 this->pheromone_matrix[pkey(id_i, id_j)] += candidate_quality;
             }
-            // std::cout << std::endl;
         }
         ant = this->iteration_best;
     }

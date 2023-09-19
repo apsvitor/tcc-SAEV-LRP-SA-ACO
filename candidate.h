@@ -25,13 +25,6 @@ public:
 
     int         __station_randomizer();
     Vehicle*    __generate_new_vehicle(int v_index);
-    Vertex*     __find_a_station_to_stop(Vehicle *car_pointer);
-    Vertex*     __choose_next_edge(
-                    std::map<pkey, float> &pheromone_matrix,
-                    Vertex *current_v);
-    void        __path_builder(
-                    std::map<pkey, float> &pheromone_matrix,
-                    Vehicle *car_pointer);
 
     double      __calculate_candidate_cost();
 
@@ -46,11 +39,18 @@ public:
 
     std::vector<Vehicle*> get_all_vehicles();
     double get_candidate_cost();
-    int get_ignored_requests();
-    int get_remaining_requests();
-    void set_remaining_requests(int new_value);
     void change_vehicle(int index, Vehicle *new_vehicle, int new_cost);
 
     bool validate_path(std::vector<Vertex> path);
     
+
+    // test
+    bool path_builder(std::map<pkey, float> &pheromone_matrix,
+                      Vehicle *car_pointer);
+    Trip choose_next_trip(std::map<pkey, float> &pheromone_matrix,
+                             Vehicle *car_pointer);
+    Trip is_feasible(Vehicle* car_pointer, Vertex* destination);
+    void update_vehicle(Vehicle *car_pointer, Trip trip);
+    double __calculate_heuristic_value(Trip trip);
+    double __calculate_cost();
 };

@@ -1,4 +1,11 @@
+* Compiling and Running *
+g++ *.cpp -o main -Wall
+./main
 
+
+* Valgrind *
+sudo apt install valgrind
+valgrind -s --leak-check=full --show-leak-kinds=all --track-origins=yes ./main
 
 
 INPUTS:
@@ -68,3 +75,77 @@ delta_Tau(i,j) = 0          Caso contrário
 Evaporação:
 Tau(t)      = (1-ro) * Tau(t)
 Tau(t+1)    = 
+
+
+
+
+
+
+
+
+INPUT
+
+Se tenho estipulado que nenhuma viagem tem duração superior a 45 min,
+Então posso determinar a distância máxima entre uma origem e um destino:
+    velocidade média = (deslocamento)/(tempo)
+    Sendo a velocidade média = 35 km/h:
+    35 = (deslocamento máximo) / (45/60);
+    deslocamento máximo = 26,25 km.
+
+
+
+/*
+    Each iteration must randomize a new valid node
+    Valid nodes are characterized by:
+        1_ valid movement: already processed at the beginning
+            * station -> request
+            * request -> request
+            * request -> station
+        2_ unanswered requests
+            * is_used == false
+        3_ time-feasible
+            * is_on_time == true
+            * true for all stations
+            * calculated for requests:
+                . time_of_vehicle: tov
+                . time_of_cruise: toc  (different for each type of node)
+                . time_of_request_start: tors
+                . tov + toc <= tors + eps
+        4_ energy-feasible
+            * has_energy -> tricky considering recharge
+                . current_energy_of_vehicle: ceov
+                . energy_to_complete_trip: etct
+                . if ceov - etct < minimum_energy
+                    check for recharge-feasibility
+                    implies in new time-feasibility check
+
+    After selecting only valid nodes, proceed to randomly choose one
+    
+    This kind of check will guarantee that only stations will remain
+    once a car is unable to complete more trips.
+    Checking each node should take O(1)
+    */
+
+
+/*
+        Three kinds of trips:
+        1. Request to Station:
+            - A: request destination (current_vertex)
+            - B: station
+
+        2. Station to Request:
+            - A: station (current_vertex)
+            - B: request origin
+            - C: request destination
+
+        3. Request X to Request Y:
+            I) Without recharging
+                - A: request X destination (current_vertex)
+                - B: request Y origin
+                - C: request Y destination
+            II) With recharge
+                - A: request X destination (current_vertex)
+                - B: station S
+                - C: request Y origin
+                - D: request Y destination
+    */

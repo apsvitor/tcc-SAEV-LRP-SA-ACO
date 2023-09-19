@@ -17,3 +17,39 @@ namespace random_gen{
         return distr(generator);
     }
 }
+
+
+enum TripType {
+    REQUEST_STATION,
+    STATION_REQUEST,
+    REQUEST_REQUEST,
+    REQUEST_STATION_REQUEST,
+    STATION_STOP,
+    REQUEST_STOP
+};
+
+class Trip {
+public:
+    bool        is_feasible;
+    double      energy_total;
+    int         time_total;
+    int         A; 
+    int         B;
+    int         C;
+    int         D;
+    TripType    trip_type;
+
+    Trip() {};
+
+    Trip(bool is_feasible, double energy_total, int time_total, 
+         int A, int B, int C, int D, TripType trip_type){
+        this->is_feasible   = is_feasible;
+        this->energy_total  = energy_total;
+        this->time_total    = time_total;
+        this->A             = A;
+        this->B             = B;
+        this->C             = C;
+        this->D             = D;
+        this->trip_type     = trip_type;
+    };
+};
