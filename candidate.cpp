@@ -19,7 +19,7 @@ Candidate::Candidate(
 }
 
 Candidate::~Candidate() {
-    for (int i=0; i<this->all_vehicles.size();i++){
+    for (unsigned int i=0; i<this->all_vehicles.size();i++){
         delete this->all_vehicles[i];
     }
 }
@@ -57,13 +57,14 @@ void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
         car_pointer = __generate_new_vehicle(v_index++);
         // build the path for the vehicle
         bool keep_working = true;
-        clock_t tStart = clock();
         int cont=0;
         while(keep_working) {
-            keep_working = path_builder(pheromone_matrix, car_pointer);
+            if  (this->remaining_requests > this->ignored_requests)
+                keep_working = path_builder(pheromone_matrix, car_pointer);
+            else
+                keep_working = false;
             cont++;
         }
-        std::cout << "\t\tVehicle [" << v_index << "] [" << cont << "] --> " << (double)(clock() - tStart)/CLOCKS_PER_SEC << std::endl;
         // add vehicle to the solution
         this->all_vehicles.push_back(car_pointer);
     }
@@ -120,7 +121,7 @@ bool Candidate::validate_path(std::vector<Vertex> path) {
 
     bool    is_on_time = true, 
             has_energy = true;
-    for (int i=0; i<path.size()-1; i++) {
+    for (unsigned int i=0; i<path.size()-1; i++) {
         // move type: station -> request
         if  (path[i].vertex_type == 's' && path[i+1].vertex_id == 'r') {
             // the vehicle IS RECHARGING
@@ -128,7 +129,6 @@ bool Candidate::validate_path(std::vector<Vertex> path) {
             double distance_of_request  = static_cast<Request*>(&(path[i+1]))->request_distance;
 
             int request_starting_time   = static_cast<Request*>(&(path[i+1]))->pickup_time;
-            int time_to_finish_request  = std::ceil(distance_of_request/vehicle_c::MEAN_VELOCITY);
             int time_to_reach_origin    = std::ceil(distance_to_origin/vehicle_c::MEAN_VELOCITY);
             int total_time_cost         = time_of_vehicle + time_to_reach_origin;
 
@@ -224,7 +224,9 @@ bool Candidate::path_builder(std::map<pkey, float> &pheromone_matrix,
     // build a path to a given vehicle
     try {
         Trip trip_chosen = choose_next_trip(pheromone_matrix, car_pointer);
-        update_vehicle(car_pointer, trip_chosen);
+        if  (trip_chosen.is_feasible){
+            update_vehicle(car_pointer, trip_chosen);
+        }
         return trip_chosen.is_feasible;
     }
     catch (const std::exception &error) {
@@ -238,7 +240,6 @@ Trip Candidate::choose_next_trip(std::map<pkey, float> &pheromone_matrix,
     // choose a valid node between all of current_v's neighbors
     Vertex *current_v = this->vertices_list[car_pointer->current_vertex];
     std::vector<Vertex*> adj_list = current_v->adj_list;
-
     // cumulative sum to represent the weights of the edges
     std::vector<double> cumulative_sum;
 
@@ -270,7 +271,6 @@ Trip Candidate::choose_next_trip(std::map<pkey, float> &pheromone_matrix,
 
                 // heuristic information
                 heuristic_value = __calculate_heuristic_value(trip);
-
                 // pheromone value
                 pci id_j = pci(neighbor_v->vertex_type, neighbor_v->vertex_id);
                 pheromone_value = pow(pheromone_matrix[pkey(id_i, id_j)], aco_c::ALPHA);
@@ -278,19 +278,20 @@ Trip Candidate::choose_next_trip(std::map<pkey, float> &pheromone_matrix,
                 sum_components_value += (pheromone_value * heuristic_value);
                 // fix the value pushed into the cumulative sum to consider heuristic info and pheromone value
                 cumulative_sum.push_back(pheromone_value * heuristic_value);
-                if  (cumulative_sum.size() > 1)
+                if  (cumulative_sum.size() > 1){
                     cumulative_sum[cumulative_sum.size()-1] += cumulative_sum[cumulative_sum.size()-2];
+                }
             }
         }
     }
 
     // at a station and feasible_trips is empty, vehicle stays at such station.
-    if  (current_v->vertex_type == 's' && feasible_trips.empty()) {
+    if  (current_v->vertex_type == 's' && feasible_trips.size() <= this->ignored_requests) {
         return Trip(false, 0, 0, current_v->vertex_id, -1, -1, -1, STATION_STOP);
     }
 
     // at a request and feasible_trips size equals the number of stations, find a station to stop.
-    if  (current_v->vertex_type == 'r' && feasible_trips.size() == this->num_stations) {
+    if  (current_v->vertex_type == 'r' && feasible_trips.size() == this->num_stations + this->ignored_requests) {
         for (int station: this->s_ind) {
             if  (static_cast<Station*>(this->vertices_list[station])->is_used) {
                 // std::cout << this->vertices_list[station]->vertex_type << '_' << this->vertices_list[station]->vertex_id
@@ -307,13 +308,13 @@ Trip Candidate::choose_next_trip(std::map<pkey, float> &pheromone_matrix,
             + std::to_string(current_v->vertex_id) + std::string(" to any of the stations.")
         );
     }
-
+    
     // finds out which edge will be randomly chosen according to its interval
     double max_sum = (cumulative_sum[cumulative_sum.size()-1]) / (sum_components_value);
     double random_probability = random_gen::random_float(0.0, 1.0) * max_sum;
 
     // TODO: implement a binary search for larger/denser instances
-    for (int i=0; i<cumulative_sum.size(); i++)
+    for (unsigned int i=0; i<cumulative_sum.size(); i++)
         if  (cumulative_sum[i] / sum_components_value >= random_probability)
             return feasible_trips[i];
     
@@ -328,12 +329,12 @@ Trip Candidate::is_feasible(Vehicle* car_pointer, Vertex* destination) {
     double energy_vehicle   = car_pointer->current_battery;
     double time_vehicle     = car_pointer->time_of_vehicle;
     double energy_max       = vehicle_c::MAX_BATTERY;
-    double energy_min       = energy_min * vehicle_c::MIN_BATTERY_LEVEL;
+    double energy_min       = energy_max * vehicle_c::MIN_BATTERY_LEVEL;
 
     // Hypothetical station visit
     // A vehicle must be able to reach a station after finishing a request
-    Vertex* station_hyp = this->vertices_list[this->__station_randomizer()];
-
+    Vertex* station_hyp;
+    
     // trip information
     double dist_ab = 0, dist_bc = 0, dist_cd = 0, dist_ds = 0,
            energy_ab = 0, energy_bc = 0, energy_cd = 0, energy_ds = 0,
@@ -343,32 +344,30 @@ Trip Candidate::is_feasible(Vehicle* car_pointer, Vertex* destination) {
     int A, B, C, D;
     TripType trip_type;
 
-    // Case 1: Request to Station - should always be true (SANITY CHECK)
+    // Case 1: Request to Station
     if  (origin->vertex_type == 'r' && destination->vertex_type == 's') {
         dist_ab = static_cast<Request*>(origin)->destination.get_distance(destination->p_xy);
-        // dist_ab = origin->p_xy.get_distance(destination->p_xy);
         energy_ab = dist_ab * vehicle_c::CONSUMPTION_RATE;
         time_ab = dist_ab / vehicle_c::MEAN_VELOCITY;
 
-        // check input. It is expected being able to reach any station from any request.
         if  (energy_vehicle - energy_ab < energy_min) {
-            std::cout << "energy: " << energy_vehicle << "  energy_ab: " << energy_ab << "   energy_min " << energy_min << std::endl;
-            throw std::runtime_error(
-                std::string("[Is Feasible - Case 1] Input issue: unable to find a feasible path from request ")
-                + std::to_string(origin->vertex_id) + std::string(" to any of the stations.")
-            );
+            is_feasible = false;
         }
         // trip information update
-        energy_vehicle_final = energy_vehicle - energy_ab;
-        time_vehicle_final = time_vehicle + time_ab;
-        A = origin->vertex_id + this->num_stations;
-        B = destination->vertex_id;
-        C = D = -1;
-        trip_type = REQUEST_STATION;
+        else {
+            is_feasible = true;
+            energy_vehicle_final = energy_vehicle - energy_ab;
+            time_vehicle_final = time_vehicle + time_ab;
+            A = origin->vertex_id + this->num_stations;
+            B = destination->vertex_id;
+            C = D = -1;
+            trip_type = REQUEST_STATION;
+        }
     }
 
     // Case 2: Station to Request:
     else if (origin->vertex_type == 's' && destination->vertex_type == 'r') {
+        station_hyp = this->vertices_list[static_cast<Request*>(destination)->closest_station];
         dist_ab     = origin->p_xy.get_distance(destination->p_xy);
         dist_bc     = static_cast<Request*>(destination)->request_distance;
         dist_ds     = static_cast<Request*>(destination)->destination.get_distance(station_hyp->p_xy);
@@ -420,10 +419,14 @@ Trip Candidate::is_feasible(Vehicle* car_pointer, Vertex* destination) {
     // Case 3: Request to Request
     else if (origin->vertex_type == 'r' && destination->vertex_type == 'r') {
         // first we check if it is possible to complete the trip without recharging
-        dist_ab     = origin->p_xy.get_distance(destination->p_xy);
+        station_hyp = this->vertices_list[static_cast<Request*>(destination)->closest_station];
+
+        dist_ab     = static_cast<Request*>(origin)->destination.get_distance(destination->p_xy);
         dist_bc     = static_cast<Request*>(destination)->request_distance;
+        dist_ds     = static_cast<Request*>(destination)->destination.get_distance(station_hyp->p_xy);
         energy_ab   = dist_ab * vehicle_c::CONSUMPTION_RATE;
         energy_bc   = dist_bc * vehicle_c::CONSUMPTION_RATE;
+        energy_ds   = dist_ds * vehicle_c::CONSUMPTION_RATE;
         time_ab     = dist_ab / vehicle_c::MEAN_VELOCITY;
         time_bc     = dist_bc / vehicle_c::MEAN_VELOCITY;
         int time_pickup = static_cast<Request*>(destination)->pickup_time;
@@ -434,44 +437,52 @@ Trip Candidate::is_feasible(Vehicle* car_pointer, Vertex* destination) {
         }
         else {
             // energy feasibility
-            if  (energy_vehicle - (energy_ab + energy_cd + energy_ds) < energy_min) {
+            if  (energy_vehicle - (energy_ab + energy_bc + energy_ds) < energy_min) {
                 // Must Recharge -> recalculate route
-                dist_ab = origin->p_xy.get_distance(station_hyp->p_xy);
-                dist_bc = station_hyp->p_xy.get_distance(destination->p_xy);
+                Vertex* station_rec = this->vertices_list[static_cast<Request*>(origin)->closest_station];
+
+                dist_ab = static_cast<Request*>(origin)->destination.get_distance(station_rec->p_xy);
+                dist_bc = station_rec->p_xy.get_distance(destination->p_xy);
                 dist_cd = static_cast<Request*>(destination)->request_distance;
-                dist_ds = static_cast<Request*>(destination)->destination.get_distance(station_hyp->p_xy);
                 energy_ab = dist_ab * vehicle_c::CONSUMPTION_RATE;
                 energy_bc = dist_bc * vehicle_c::CONSUMPTION_RATE;
                 energy_cd = dist_cd * vehicle_c::CONSUMPTION_RATE;
-                energy_ds = dist_ds * vehicle_c::CONSUMPTION_RATE;
-                time_ab = dist_ab * vehicle_c::MEAN_VELOCITY;
-                time_bc = dist_bc * vehicle_c::MEAN_VELOCITY;
-                time_cd = dist_cd * vehicle_c::MEAN_VELOCITY;
+                time_ab = dist_ab / vehicle_c::MEAN_VELOCITY;
+                time_bc = dist_bc / vehicle_c::MEAN_VELOCITY;
+                time_cd = dist_cd / vehicle_c::MEAN_VELOCITY;
 
-                double energy_required = energy_ab + energy_bc + energy_cd + energy_ds;
-                double energy_missing;
+                double time_spent_recharging;
+                double dist_real_trip   = dist_ab + dist_bc + dist_cd;
+                double dist_hyp_trip    = dist_real_trip + dist_ds;
+                double time_real_trip   = dist_real_trip / vehicle_c::MEAN_VELOCITY;
+                double energy_real_trip = dist_real_trip * vehicle_c::CONSUMPTION_RATE;
+                double energy_hyp_trip  = dist_hyp_trip * vehicle_c::CONSUMPTION_RATE;
+
+                double time_until_trip_starts = time_pickup + request_c::LATENESS_EPS - time_vehicle - time_ab;
+                double time_until_full_charge = (energy_max - energy_vehicle) / vehicle_c::CHARGING_RATE;
+
                 if  (problem_type::IS_PARTIAL_RECHARGE)
-                    energy_missing = abs(energy_vehicle - (energy_required + energy_min));
+                    time_spent_recharging = std::min(time_until_full_charge, time_until_trip_starts);
                 else
-                    energy_missing = abs((energy_vehicle - energy_ab) - vehicle_c::MAX_BATTERY);
-                
-                double time_recharging = energy_missing * vehicle_c::CHARGING_RATE;
-
-                // new time feasibility
-                if  (time_vehicle + time_ab + time_recharging + time_bc > time_pickup + request_c::LATENESS_EPS) {
+                    time_spent_recharging = time_until_full_charge;
+                if  (time_spent_recharging < 0 || // time-unfeasible even without recharging
+                     time_vehicle + time_spent_recharging + time_ab > time_pickup + request_c::LATENESS_EPS){
                     is_feasible = false;
                 }
                 else {
-                    is_feasible = true;
-                    if  (problem_type::IS_PARTIAL_RECHARGE)
-                        energy_vehicle_final = energy_vehicle + energy_missing - (energy_ab + energy_bc + energy_cd);
-                    else  // the energy_ab is already accounted for in full recharge
-                        energy_vehicle_final = energy_vehicle + energy_missing - (energy_bc + energy_cd);
-                    time_vehicle_final = time_vehicle + time_ab + time_recharging + time_bc + time_cd;
-                    A = origin->vertex_id + this->num_stations;
-                    B = station_hyp->vertex_id;
-                    C = D = destination->vertex_id + this->num_stations;
-                    trip_type = REQUEST_STATION_REQUEST;
+                   double energy_recharged = time_spent_recharging * vehicle_c::CHARGING_RATE;
+                    if  ((energy_vehicle + energy_recharged) - (energy_hyp_trip) < energy_min){
+                        is_feasible = false;
+                    }
+                    else {
+                        is_feasible = true;
+                        energy_vehicle_final = energy_vehicle + energy_recharged - energy_real_trip;
+                        time_vehicle_final = time_vehicle + time_spent_recharging + time_real_trip;
+                        A = origin->vertex_id + this->num_stations;
+                        B = station_rec->vertex_id;
+                        C = D = destination->vertex_id + this->num_stations;
+                        trip_type = REQUEST_STATION_REQUEST;
+                    }
                 }
             }
             else {

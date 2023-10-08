@@ -59,10 +59,8 @@ std::vector<Candidate*> AntColonyOptimization::_ant_builder(std::vector<Candidat
     Candidate *new_ant;
     double iteration_best_cost = INT64_MAX;
     for (int i=0; i<aco_c::MAX_ANTS; i++) {
-        clock_t tStart = clock();
         new_ant = new Candidate(this->vertices_list, this->s_ind, this->r_ind);
         new_ant->generate_candidate(this->pheromone_matrix);
-        std::cout << "\tAnt [" << i << "]: " << (double)(clock() - tStart)/CLOCKS_PER_SEC << std::endl;
         double current_ant_cost = new_ant->get_candidate_cost();
         if  (current_ant_cost < iteration_best_cost) {
             iteration_best_cost = current_ant_cost;
@@ -92,7 +90,7 @@ void AntColonyOptimization::_update_pheromone_trail(){
 
         for (auto &vehicle: all_vehicles) {
             std::vector<int> full_path = vehicle->vehicle_path;
-            for (int i=0; i<full_path.size()-1; i++) {
+            for (unsigned int i=0; i<full_path.size()-1; i++) {
                 pci id_i = pci(this->vertices_list[full_path[i]]->vertex_type,
                                this->vertices_list[full_path[i]]->vertex_id);
                 pci id_j = pci(this->vertices_list[full_path[i+1]]->vertex_type,

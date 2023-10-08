@@ -14,8 +14,8 @@ private:
     std::vector<int>        s_ind;          // station indices
     std::vector<int>        r_ind;          // request indices
 
-    int                     remaining_requests;
-    int                     ignored_requests;
+    unsigned int            remaining_requests;
+    unsigned int            ignored_requests;
     int                     num_stations;
 
     double                  candidate_cost;

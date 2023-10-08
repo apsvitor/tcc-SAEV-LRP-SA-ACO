@@ -39,7 +39,7 @@ namespace station_c {
 namespace request_c {
     const double    COST_PER_TRIP       = 19.73;    // $RMB
     const int       LATENESS_EPS        = 5;        // acceptable lateness (min)
-    const double    MIN_REQUESTS_DONE   = 0.70;     // %
+    const double    MIN_REQUESTS_DONE   = 1.00;     // %
     const double    UNSERVED_PENALTY    = 19.73;    // $RMB
 }
 
@@ -53,12 +53,10 @@ namespace heuristic_info {
 }
 
 namespace problem_type {
-    const bool      IS_PARTIAL_RECHARGE = false;
+    const bool      IS_PARTIAL_RECHARGE = true;
 }
 
 // key pair for the pheromone matrix. Ex.: ('s', 1) -> Station 1
 typedef std::pair<char, int> pci;
 // key structure for the pheromone matrix. Ex.: (vertex_i, vertex_j)
 typedef std::pair<pci, pci> pkey;
-// key structure for the edge-choosing method
-typedef std::pair<double, int> pdi;
