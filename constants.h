@@ -1,9 +1,9 @@
 
 // SIMULATED ANNEALING PARAMETERS
 namespace sa_c{
-    const double    INITIAL_T                   = 10000.0;
+    const double    INITIAL_T                   = 1000.0;
     const double    COOLING_FACTOR              = 0.95;
-    const double    NEIGHBOR_REDUCTION_FACTOR   = 0.0005;
+    const double    NEIGHBOR_REDUCTION_FACTOR   = 0.05;
     const double    MIN_T                       = 1.0;
     const int       MAX_ITERATIONS              = 50;
     const int       MAX_NEIGHBORS_ITERATIONS    = 50;
@@ -41,6 +41,7 @@ namespace request_c {
     const int       LATENESS_EPS        = 5;        // acceptable lateness (min)
     const double    MIN_REQUESTS_DONE   = 1.00;     // %
     const double    UNSERVED_PENALTY    = 19.73;    // $RMB
+    const double    ZETA                = 0.30;     // Probability of accepting a request
 }
 
 namespace heuristic_info {
@@ -53,7 +54,7 @@ namespace heuristic_info {
 }
 
 namespace problem_type {
-    const bool      IS_PARTIAL_RECHARGE = true;
+    const bool      IS_PARTIAL_RECHARGE = false;
 }
 
 // key pair for the pheromone matrix. Ex.: ('s', 1) -> Station 1

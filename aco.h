@@ -6,7 +6,7 @@
 #include <iostream>
 
 class AntColonyOptimization {
-private:
+public:
     // additional attributes
     // This pheromone matrix will be a representation of every possible edge
     // between vertices and each pair (i,j) contains the current pheromone value.
@@ -17,14 +17,15 @@ private:
     std::vector<int>        r_ind;              // request indices
 
     Candidate               *global_best;
-    Candidate               *iteration_best;
 
    // auxiliary methods
-    std::vector<Candidate*>  _ant_builder(std::vector<Candidate*>);
-    void                     _create_pheromone_matrix();
-    void                     _update_pheromone_trail();
+    // std::vector<Candidate*> _ant_builder(std::vector<Candidate*>);
+    // void  _ant_builder();
+    Candidate*              ant_builder();
+    void                    _create_pheromone_matrix();
+    // void                    _update_pheromone_trail();
+    void                    update_pheromone_trail(Candidate *ant);
 
-public:
     AntColonyOptimization(std::vector<Vertex*> vertices_list);
     double get_best_candidate_cost();
     void run();

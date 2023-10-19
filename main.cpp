@@ -14,7 +14,6 @@ void solve(){
     // Test sets
     // NOTE: could be replaced by a directory sweep later
     std::string instances[] = {
-        // "entrada",
         "S2_A4_T1",
         "S2_A8_T1",
         "S2_A12_T1",
@@ -26,7 +25,7 @@ void solve(){
         "S2_A75_T1",
         "S2_A100_T1"
     };
-    std::string PROBLEM_TYPE = "RPST";
+    std::string PROBLEM_TYPE = "RTST";
     int NUM_OF_INSTANCE_TESTS = 20;
     int NUM_OF_INSTANCES = 10;          // instances.size()
 
@@ -35,7 +34,7 @@ void solve(){
 
         std::string output_file_path = "./results/" + PROBLEM_TYPE + "/" + instance_name + ".csv";
         std::ofstream out(output_file_path);
-        out << "indice;instancia;custo ACO-SA;tempo(s)\n";
+        out << "indice;instancia;custo ACO-SA;tempo(s);atendimentos\n";
 
         for (int test=1; test<=NUM_OF_INSTANCE_TESTS; test++) {
             std::string input_file_path = "./tests/" + instance_name + ".txt";
@@ -77,7 +76,8 @@ void solve(){
             AntColonyOptimization ACO = AntColonyOptimization(vertices_list);
             ACO.run();
             out << ACO.get_best_candidate_cost() << ';';
-            out << (double)(clock() - tStart)/CLOCKS_PER_SEC << std::endl;
+            out << (double)(clock() - tStart)/CLOCKS_PER_SEC << ';';
+            out << ACO.global_best->answer_count << std::endl;
 
             for (unsigned int vert=0; vert<vertices_list.size(); vert++)
                 delete vertices_list[vert];
