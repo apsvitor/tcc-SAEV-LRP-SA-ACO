@@ -4,7 +4,7 @@
 AntColonyOptimization::AntColonyOptimization(std::vector<Vertex*> vertices_list){
     // input data
     this->vertices_list = vertices_list;
-    this->global_best = new Candidate();
+    this->global_best = nullptr; // Candidate();
     // create the graph-like structure and pheromone matrix from input data
     _create_pheromone_matrix();
 }
@@ -21,6 +21,7 @@ void AntColonyOptimization::_create_pheromone_matrix() {
         // saves the indices for stations and requests within the vertices list
         vertex_type == 'r' ? this->r_ind.push_back(ind) : this->s_ind.push_back(ind);
         ind++;
+        int neighbor_index = 0;
         for (auto &neighbor: this->vertices_list) {
             neighbor_id = neighbor->vertex_id;
             neighbor_type = neighbor->vertex_type;
@@ -31,8 +32,10 @@ void AntColonyOptimization::_create_pheromone_matrix() {
             if  (is_neighbor) {
                 id_j = pci(neighbor_type, neighbor_id);
                 this->pheromone_matrix[pkey(id_i, id_j)] = aco_c::BASE_PHEROMONE;
-                vertex->adj_list.push_back(neighbor);
+                // vertex->adj_list.push_back(neighbor);
+                vertex->adj_list_int.push_back(neighbor_index);
             }
+            neighbor_index++;
         }
     }
 }
@@ -40,32 +43,37 @@ void AntColonyOptimization::_create_pheromone_matrix() {
 void AntColonyOptimization::run() {
     // int consecutive_no_improvements = 0;
     for (int iter = 0; iter < aco_c::MAX_ITERATIONS; iter++) {
+        
         Candidate *iteration_best = this->ant_builder();
+        Candidate *sa_best;
         std::cout << "==> ITER = " << iter << " | Cost: " << iteration_best->candidate_cost;
-        std::cout << std::endl;
         // Local search (Simulated Annealing)
         if  (iteration_best->all_vehicles.size() > 1) {
             SimulatedAnnealingOptimization sa_opt;
-            sa_opt.run(iteration_best);
+            sa_best = sa_opt.run(iteration_best);
+            delete iteration_best;
+            iteration_best = sa_best;
         }
-        
-        if  (iteration_best->candidate_cost < this->global_best->candidate_cost){
+        std::cout << " | After SA Cost: " << iteration_best->candidate_cost;
+        update_pheromone_trail(iteration_best);
+
+        if  (this->global_best == nullptr || iteration_best->candidate_cost < this->global_best->candidate_cost){
             std::cout << " -> New global best found!";
-            delete global_best;
+            if  (this->global_best)
+                delete global_best;
             this->global_best = iteration_best;
             // restart callback counter 
             // consecutive_no_improvements = 0;
         }
-        // std::cout << "After SA, global: " << this->global_best->candidate_cost << std::endl;
-        // else {
-        //     consecutive_no_improvements++;
-        // }
-        // std::cout << std::endl;
+        else {
+            // consecutive_no_improvements++;
+            delete iteration_best;
+        }
+        std::cout << std::endl;
         // if  (consecutive_no_improvements == 80){
         //     std::cout << "No improvements for " << consecutive_no_improvements << " iterations in a row." << std::endl;
         //     break;
         // }
-        update_pheromone_trail(iteration_best);
         update_pheromone_trail(this->global_best);
     }
 }
@@ -73,26 +81,35 @@ void AntColonyOptimization::run() {
 Candidate* AntColonyOptimization::ant_builder() {
     Candidate *new_ant, *iteration_best = nullptr;
     double iteration_best_cost = INT64_MAX;
-    int best_iteration_is_used[this->s_ind.size()],
-        best_iteration_is_done[this->r_ind.size()],
-        best_iteration_is_refused[this->r_ind.size()];
+    std::vector<int> _vertice_status;
+    std::vector<bool> _is_refused;
+    // int best_iteration_is_used[this->s_ind.size()],
+        // best_iteration_is_done[this->r_ind.size()],
+        // best_iteration_is_refused[this->r_ind.size()];
 
     for (int i=0; i<aco_c::MAX_ANTS; i++) {
         new_ant = new Candidate(this->vertices_list, this->s_ind, this->r_ind);
         new_ant->generate_candidate(this->pheromone_matrix);
+
         if  (new_ant->candidate_cost < iteration_best_cost) {
             if  (iteration_best)
                 delete iteration_best;
             iteration_best = new_ant;
+            _vertice_status.clear();
+            _is_refused.clear();
             // save iteration best vertice_list state
             for (unsigned int j=0; j<iteration_best->vertices_list.size(); j++){    
                 Vertex *v = iteration_best->vertices_list[j];
                 if  (v->vertex_type == 'r'){
-                    best_iteration_is_done[j - this->s_ind.size()] = static_cast<Request*>(v)->is_done;
-                    best_iteration_is_refused[j - this->s_ind.size()] = static_cast<Request*>(v)->is_refused;
+                    _vertice_status.push_back(static_cast<Request*>(v)->is_done);
+                    _is_refused.push_back(static_cast<Request*>(v)->is_refused);
+                    // best_iteration_is_done[j - this->s_ind.size()] = static_cast<Request*>(v)->is_done;
+                    // best_iteration_is_refused[j - this->s_ind.size()] = static_cast<Request*>(v)->is_refused;
                 }
                 else {
-                    best_iteration_is_used[j] = static_cast<Station*>(v)->is_used;
+                    _vertice_status.push_back(static_cast<Station*>(v)->is_used);
+                    _is_refused.push_back(-1);
+                    // best_iteration_is_used[j] = static_cast<Station*>(v)->is_used;
                 }
             }
             iteration_best_cost = iteration_best->candidate_cost;
@@ -101,21 +118,17 @@ Candidate* AntColonyOptimization::ant_builder() {
             delete new_ant;
         }
     }
-    std::cout << "ant_builder: ";
     for (unsigned int j=0; j<iteration_best->vertices_list.size(); j++){    
         Vertex *v = iteration_best->vertices_list[j];
         if  (v->vertex_type == 'r'){
-            static_cast<Request*>(v)->is_done = best_iteration_is_done[j - this->s_ind.size()] ;
-            static_cast<Request*>(v)->is_refused = best_iteration_is_refused[j - this->s_ind.size()];
-            std::cout << "[r_" << v->vertex_id << ", " << static_cast<Request*>(v)->is_done << "] | ";
+            static_cast<Request*>(v)->is_done = _vertice_status[j];
+            static_cast<Request*>(v)->is_refused = _is_refused[j];
         }
         else {
-            static_cast<Station*>(v)->is_used = best_iteration_is_used[j];
-            std::cout << "[s_" << v->vertex_id << ", " << static_cast<Station*>(v)->is_used << "] | ";
+            static_cast<Station*>(v)->is_used = _vertice_status[j];
         }
         
     }
-    std::cout << std::endl;
     return iteration_best;
 }
 

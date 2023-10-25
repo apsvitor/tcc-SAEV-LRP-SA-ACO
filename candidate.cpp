@@ -5,19 +5,68 @@ Candidate::Candidate() {
     this->candidate_cost = INT64_MAX;
 }
 
+// copy constructor
+Candidate::Candidate(Candidate &cand) {
+    // copy vertice_list
+    std::vector<Vertex*> vertice_list_copy;
+    for (auto vertex: cand.vertices_list) {
+        Vertex *copy_vertex;
+        if  (vertex->vertex_type == 'r'){
+            Request *r = static_cast<Request*>(vertex);
+            copy_vertex = new Request(*r);
+        }
+        else{
+            Station *s = static_cast<Station*>(vertex);
+            copy_vertex = new Station(*s);
+        }
+        vertice_list_copy.push_back(copy_vertex);
+    }
+    this->vertices_list = vertice_list_copy;
+    
+    // copy all_vehicles
+    std::vector<Vehicle*> all_vehicles_copy;
+    for (auto vehicle: cand.all_vehicles) {
+        Vehicle *copy_vehicle = new Vehicle(*vehicle);
+        all_vehicles_copy.push_back(copy_vehicle);
+    }
+    this->all_vehicles = all_vehicles_copy;
+
+    // copy the remaining attributes directly
+    this->s_ind = cand.s_ind;
+    this->r_ind = cand.r_ind;
+    this->remaining_requests = cand.remaining_requests;
+    this->ignored_requests = cand.ignored_requests;
+    this->num_stations = cand.num_stations;
+    this->answer_count = cand.answer_count;
+    this->candidate_cost = cand.candidate_cost;
+}
+
 Candidate::Candidate(
         std::vector<Vertex*> vertices_list,
         std::vector<int>     s_ind,
         std::vector<int>     r_ind){
     // Indices will serve as reference for RNG
-    this->vertices_list = vertices_list;
+    std::vector<Vertex*> vertice_list_copy;
+    for (auto vertex: vertices_list) {
+        Vertex *copy_vertex;
+        if  (vertex->vertex_type == 'r'){
+            Request *r = static_cast<Request*>(vertex);
+            copy_vertex = new Request(*r);
+        }
+        else{
+            Station *s = static_cast<Station*>(vertex);
+            copy_vertex = new Station(*s);
+        }
+        vertice_list_copy.push_back(copy_vertex);
+    }
+    this->vertices_list = vertice_list_copy;
     this->s_ind         = s_ind;
     this->r_ind         = r_ind;
     this->num_stations  = s_ind.size();
     this-> answer_count = 0; 
     int ignore_count = 0,
         max_refused_requests = std::floor(this->r_ind.size() * (1.0 - request_c::MIN_REQUESTS_DONE));
-    for (auto v: vertices_list) {
+    for (auto v: this->vertices_list) {
         if  (v->vertex_type == 'r'){
             if  (ignore_count == max_refused_requests){
                 // automatically forces all the subsequent requests to be answered
@@ -42,8 +91,11 @@ Candidate::Candidate(
 }
 
 Candidate::~Candidate() {
-    for (unsigned int i=0; i<this->all_vehicles.size();i++){
+    for (unsigned int i=0; i<this->all_vehicles.size(); i++){
         delete this->all_vehicles[i];
+    }
+    for (unsigned int i=0; i<this->vertices_list.size(); i++){
+        delete this->vertices_list[i];
     }
 }
 
@@ -67,10 +119,14 @@ void Candidate::generate_candidate(std::map <pkey, float> &pheromone_matrix) {
     int v_index=0;
     Vehicle *car_pointer;
     for (auto& v: this->vertices_list) {
-        if  (v->vertex_type == 'r')
-            static_cast<Request*>(v)->is_done = false;
-        else
-            static_cast<Station*>(v)->is_used = 0;
+        if  (v->vertex_type == 'r'){
+            Request *r = static_cast<Request*>(v);
+            r->is_done = false;
+        }
+        else{
+            Station* s = static_cast<Station*>(v);
+            s->is_used = 0;
+        }
     }
 
     // Concludes candidate generation whenever the minimum threshold is met.
@@ -137,7 +193,8 @@ bool Candidate::path_builder(std::map<pkey, float> &pheromone_matrix, Vehicle *c
 Trip Candidate::choose_next_trip(std::map<pkey, float> &pheromone_matrix, Vehicle *car_pointer) {
     // choose a valid node between all of current_v's neighbors
     Vertex *current_v = this->vertices_list[car_pointer->current_vertex];
-    std::vector<Vertex*> adj_list = current_v->adj_list;
+    // std::vector<Vertex*> adj_list = current_v->adj_list;
+    std::vector<int> adj_list_int = current_v->adj_list_int;
     // cumulative sum to represent the weights of the edges
     std::vector<double> cumulative_sum;
 
@@ -151,7 +208,9 @@ Trip Candidate::choose_next_trip(std::map<pkey, float> &pheromone_matrix, Vehicl
     std::vector<Trip> feasible_trips;
     bool request_only_moves_to_stations = true;
     // search through all of current_v's neighbors and find eligible moves
-    for (auto neighbor_v: adj_list) {
+    // for (auto neighbor_v: adj_list) {
+    for (auto index: adj_list_int) {
+        Vertex *neighbor_v = this->vertices_list[index];
         // if it's a request that's already done or refused -> invalid node
         if  (!((neighbor_v->vertex_type == 'r') && (
                 (static_cast<Request*>(neighbor_v)->is_done == true) ||
@@ -255,7 +314,8 @@ Trip Candidate::is_feasible(Vehicle* car_pointer, Vertex* destination) {
 
     // Case 2: Station to Request:
     else if (origin->vertex_type == 's' && destination->vertex_type == 'r') {
-        station_hyp = this->vertices_list[static_cast<Request*>(destination)->closest_station];
+        Request *dest = static_cast<Request*>(destination);
+        station_hyp = this->vertices_list[dest->closest_station];
         dist_ab     = origin->p_xy.get_distance(destination->p_xy);
         dist_bc     = static_cast<Request*>(destination)->request_distance;
         dist_ds     = static_cast<Request*>(destination)->destination.get_distance(station_hyp->p_xy);
@@ -308,7 +368,6 @@ Trip Candidate::is_feasible(Vehicle* car_pointer, Vertex* destination) {
     else if (origin->vertex_type == 'r' && destination->vertex_type == 'r') {
         // first we check if it is possible to complete the trip without recharging
         station_hyp = this->vertices_list[static_cast<Request*>(destination)->closest_station];
-
         dist_ab     = static_cast<Request*>(origin)->destination.get_distance(destination->p_xy);
         dist_bc     = static_cast<Request*>(destination)->request_distance;
         dist_ds     = static_cast<Request*>(destination)->destination.get_distance(station_hyp->p_xy);
@@ -328,7 +387,6 @@ Trip Candidate::is_feasible(Vehicle* car_pointer, Vertex* destination) {
             if  (energy_vehicle - (energy_ab + energy_bc + energy_ds) < energy_min) {
                 // Must Recharge -> recalculate route
                 Vertex* station_rec = this->vertices_list[static_cast<Request*>(origin)->closest_station];
-
                 dist_ab = static_cast<Request*>(origin)->destination.get_distance(station_rec->p_xy);
                 dist_bc = station_rec->p_xy.get_distance(destination->p_xy);
                 dist_cd = static_cast<Request*>(destination)->request_distance;

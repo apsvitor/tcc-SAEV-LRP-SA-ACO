@@ -31,6 +31,7 @@ public:
             std::vector<int>        s_ind,
             std::vector<int>        r_ind
     );
+    Candidate(Candidate &cand);
     ~Candidate();
     void generate_candidate(std::map <pkey, float> &pheromone_matrix);
     // test

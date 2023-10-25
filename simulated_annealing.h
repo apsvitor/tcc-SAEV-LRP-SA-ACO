@@ -6,59 +6,17 @@ private:
     int         current_iteration;
     double      current_temperature;
     double      best_cost;
+    Candidate   *cand;
 
-    void        __disturb_candidate(
-            Candidate *ant,
-            std::map <pkey, float> &pheromone_matrix);
-
-    bool        __alter_candidate(Candidate *ant);
+    bool        alter_candidate();
     
     double      __probability_of_accepting(double new_cost);
-
+    void        __reset_path(Vehicle *car_pointer, std::vector<int>& refused_index);
+    void        __chose_new_requests(const std::vector<int>& refused_index);
+    void        __build_new_path(Vehicle *v1, Vehicle *v2);
 
 public:
     SimulatedAnnealingOptimization();
-    void run(Candidate *ant);
+    ~SimulatedAnnealingOptimization(){};
+    Candidate* run(Candidate *ant);
 };
-
-/*
-#pragma once
-#include "constants.h"
-#include "candidate.h"
-#include <iostream>
-
-
-class SimulatedAnnealing {
-private:
-    // parameters and input data
-    std::vector<Station>    all_stations;
-    std::queue<Request>     all_requests;
-
-    // auxiliary attributes
-    int                     current_iteration;
-    double                  current_T;
-    double                  current_cost;
-    Candidate*              current_candidate;
-
-    // the answer
-    Candidate*              best_candidate;
-    double                  best_cost;
-
-
-    // private cost method
-    double                  _total_cost(Candidate* cand);
-    double                  _probability_of_accepting(double new_cost);
-    Candidate               _disturb_candidate(Candidate* cand);
-
-
-public:
-    SimulatedAnnealing(
-        std::vector<Station> all_stations,
-        std::queue<Request> all_requests
-    );
-
-    void print_solution();
-    void run();
-
-};
-*/
